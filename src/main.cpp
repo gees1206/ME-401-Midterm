@@ -7,6 +7,8 @@
 #include "communications.h"
 #include "stdint.h"
 
+//Successfully created a git repository
+
 
 //TODO
 //Calibrate the Color sensor
