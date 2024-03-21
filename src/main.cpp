@@ -25,18 +25,18 @@
 
 
 //IR sensor stuff
-double kp =27; double ki=0; double kd=0; 
+double kp =21; double ki=151; double kd=.263; 
 double setpoint = 0;
 int pos = 0;
 int irSensor1Pin=34;
 
 //limit switch stuff
-int limit1 = 12;
-int limit2 = 14;
+int limit1 = 36;
+int limit2 = 39; // left
 
 //LED and sensor pin setup
-int sensorPin = 15;      
-int bluePin = 17;        
+int sensorPin = 34;      
+//int bluePin = ;        
 int greenPin = 4;      
 int redPin = 2;
 int maxblack[]={3536,2895,3313};
@@ -49,16 +49,16 @@ void setup() {
   setupDCMotors();
   setupServos();
   pinMode(sensorPin, INPUT);
-  pinMode(limit1, INPUT);
-  pinMode(limit2, INPUT);
+  //pinMode(limit1, INPUT);
+  //pinMode(limit2, INPUT);
 
   pinMode(irSensor1Pin,INPUT);
 
   pinMode(redPin, OUTPUT);
   pinMode(greenPin, OUTPUT);
-  pinMode(bluePin, OUTPUT);
+ // pinMode(bluePin, OUTPUT);
 
-  // setupCommunications();
+   setupCommunications();
 
   setPIDgains1(kp,ki,kd);
 
@@ -82,13 +82,13 @@ void loop() {
 
   printf("%d IR distance\n", analogRead(irSensor1Pin));
   
-  servo2.writeMicroseconds(1700);
-  delay(200);
-  servo2.writeMicroseconds(1300);
+  //servo2.writeMicroseconds(1700);
+  //delay(200);
+  //servo2.writeMicroseconds(1300);
   printf("%d color\n", analogRead(sensorPin));
 
-  printf("%d Limit1\n", digitalRead(limit1));
-  printf("%d Limit2\n", digitalRead(limit2));
+  //printf("%d Limit1\n", digitalRead(limit1));
+  //printf("%d Limit2\n", digitalRead(limit2));
 
   // put your main code here, to run repeatedly:
   D_print("SETPOINT:"); D_print(getSetpoint1()); D_print("   POS:"); D_print(getPosition1()); D_print("    ERR:"); D_print(getError1());
@@ -152,6 +152,9 @@ void loop() {
   
 
   Serial.printf("AD36: %d\n", a);
+  analogWrite(redPin,100);
+  delay(100);
+  analogWrite(redPin,0);
 
-  delay(500);
+  //delay(500);
 }
