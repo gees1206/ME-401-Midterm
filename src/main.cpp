@@ -25,7 +25,6 @@
 //kd = 5
 
 
-
 //IR sensor stuff
 double kp =21; double ki=151; double kd=.263; 
 double setpoint = 0;
@@ -38,9 +37,9 @@ int limit2 = 39; // left
 
 //LED and sensor pin setup
 int sensorPin = 34;      
-//int bluePin = ;        
-int greenPin = 4;      
-int redPin = 2;
+int bluePin = 23;        
+int greenPin = 22;      
+int redPin = 32;
 int maxblack[]={3536,2895,3313};
 int minwhite[]={3264,2468,2865};
 int color[]={0,0,0};
@@ -51,16 +50,17 @@ void setup() {
   setupDCMotors();
   setupServos();
   pinMode(sensorPin, INPUT);
-  //pinMode(limit1, INPUT);
-  //pinMode(limit2, INPUT);
+  pinMode(limit1, INPUT);
+  pinMode(limit2, INPUT);
 
   pinMode(irSensor1Pin,INPUT);
 
   pinMode(redPin, OUTPUT);
   pinMode(greenPin, OUTPUT);
- // pinMode(bluePin, OUTPUT);
+  pinMode(bluePin, OUTPUT);
 
-   setupCommunications();
+  //Leave commented out when testing
+  // setupCommunications();
 
   setPIDgains1(kp,ki,kd);
 
@@ -144,19 +144,23 @@ void loop() {
       servo3.writeMicroseconds(1300);  
       servo4.writeMicroseconds(1300);  
     }
-
-
-
-    
+    else{
+      break;
+    }
   }
 
   int a = analogRead(36);
-  
 
   Serial.printf("AD36: %d\n", a);
-  analogWrite(redPin,100);
+  digitalWrite(redPin,HIGH);
   delay(100);
-  analogWrite(redPin,0);
+  digitalWrite(redPin,LOW);
+  digitalWrite(greenPin,HIGH);
+  delay(100);
+  digitalWrite(greenPin,LOW);
+  digitalWrite(bluePin,HIGH);
+  delay(100);
+  digitalWrite(bluePin,LOW);
 
   //delay(500);
 }
