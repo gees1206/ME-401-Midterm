@@ -25,7 +25,7 @@
 //kd = 5
 
 //Communications and positional
-int myID = 1;
+int myID = 10;
 int x;
 int y;
 int theta;
@@ -54,17 +54,18 @@ int pos = 0;
 int irSensor1Pin=34;
 
 //limit switch stuff
-int limit1 = 36;
-int limit2 = 39; // left
+int limit1 = 36; // left
+int limit2 = 39; // right
 
 //LED and sensor pin setup
 int sensorPin = 34;      
-int bluePin = 23;        
-int greenPin = 22;      
+int bluePin = 33;        
+int greenPin = 27;      
 int redPin = 32;
 int maxblack[]={3536,2895,3313};
 int minwhite[]={3264,2468,2865};
 int color[]={0,0,0};
+
 
 void setup() {
   
@@ -93,7 +94,7 @@ void setup() {
   servo1.attach(SERVO1_PIN, 500, 2400);
   servo2.attach(SERVO2_PIN, 500, 2400);   //Servo 2 is shooter
   //servo1.writeMicroseconds(1700);
-  //servo2.writeMicroseconds(1700);
+  servo2.writeMicroseconds(1700);
 
   servo3.attach(SERVO3_PIN, 1300, 1700);  //Movement servos
   servo4.attach(SERVO4_PIN, 1300, 1700);
@@ -113,65 +114,73 @@ void loop() {
   //printf("%d Limit2\n", digitalRead(limit2));
 
   //Setup RGB LED blinking
-  rgbled_setup();
+  digitalWrite(redPin,HIGH);
+  delay(100);
+  digitalWrite(redPin,LOW);
+  digitalWrite(greenPin,HIGH);
+  delay(100);
+  digitalWrite(greenPin,LOW);
+  digitalWrite(bluePin,HIGH);
+  delay(100);
+  digitalWrite(bluePin,LOW);
 
   // DC motors
   D_print("SETPOINT:"); D_print(getSetpoint1()); D_print("   POS:"); D_print(getPosition1()); D_print("    ERR:"); D_print(getError1());
   D_print("    OUTPUT:"); D_println(getOutput1());
 
 
-  while (Serial.available() > 0) // check serial monitor for input
-  {
-    // read the incoming byte:
-    int incomingByte = Serial.read();
+  // while (Serial.available() > 0) // check serial monitor for input
+  // {
+  //   // read the incoming byte:
+  //   int incomingByte = Serial.read();
 
-    // say what you got:
-    if (incomingByte == 'a')
-    {      
-      setpoint += 300; 
-      setSetpoint1(setpoint);
-    }
-    else if (incomingByte == 'z')
-    {
-      setpoint -= 300;
-      setSetpoint1(setpoint);
-    }            
-    else if (incomingByte == 'o')
-    {
-      // kp +=0.5;
-      // myPID.SetTunings(kp,ki,kd);
-    }
-    else if (incomingByte == 'o')
-    {
-      // kp -=0.1;
-      // myPID.SetTunings(kp,ki,kd);
-    }
-    else if (incomingByte == 't')
-    {
-      pos = pos+5;
-      servo1.write(pos);  
-      servo2.write(pos);  
-    }
-    else if (incomingByte == 'g')
-    {
-      pos = pos-5;
-      servo1.write(pos);  
-      servo2.write(pos);  
-    }
-    else if (incomingByte == 'f')
-    {
-      servo3.writeMicroseconds(1700);  
-      servo4.writeMicroseconds(1700);  
-    }
-    else if (incomingByte == 'b')
-    {
-      servo3.writeMicroseconds(1300);  
-      servo4.writeMicroseconds(1300);  
-    }
-    else{
-      break;
-    }
-  }
+  //   // say what you got:
+  //   if (incomingByte == 'a')
+  //   {      
+  //     setpoint += 300; 
+  //     setSetpoint1(setpoint);
+  //   }
+  //   else if (incomingByte == 'z')
+  //   {
+  //     setpoint -= 300;
+  //     setSetpoint1(setpoint);
+  //   }            
+  //   else if (incomingByte == 'o')
+  //   {
+  //     // kp +=0.5;
+  //     // myPID.SetTunings(kp,ki,kd);
+  //   }
+  //   else if (incomingByte == 'o')
+  //   {
+  //     // kp -=0.1;
+  //     // myPID.SetTunings(kp,ki,kd);
+  //   }
+  //   else if (incomingByte == 't')
+  //   {
+  //     pos = pos+5;
+  //     servo1.write(pos);  
+  //     servo2.write(pos);  
+  //   }
+  //   else if (incomingByte == 'g')
+  //   {
+  //     pos = pos-5;
+  //     servo1.write(pos);  
+  //     servo2.write(pos);  
+  //   }
+  //   else if (incomingByte == 'f')
+  //   {
+  //     servo3.writeMicroseconds(1700);  
+  //     servo4.writeMicroseconds(1700);  
+  //   }
+  //   else if (incomingByte == 'b')
+  //   {
+  //     servo3.writeMicroseconds(1300);  
+  //     servo4.writeMicroseconds(1300);  
+  //   }
+  //   else{
+  //     break;
+  //   }
+  // }
 
   //Get robot pose and ball position*
   //*Not yet implemented
@@ -208,22 +217,11 @@ void loop() {
 
   servo3.writeMicroseconds(omega_1);
   servo3.writeMicroseconds(omega_2);
-  
 
-  int a = analogRead(36);
-  Serial.printf("AD36: %d\n", a);
+  // int a = analogRead(36);
+  // Serial.printf("Left Switch: %d\n", a);
+  // int b = analogRead(39);
+  // Serial.printf("Right Switch: %d\n", b);
 
 }
 
-void rgbled_setup() //Causes the RGB LED to switch color
-{
-  digitalWrite(redPin,HIGH);
-  delay(100);
-  digitalWrite(redPin,LOW);
-  digitalWrite(greenPin,HIGH);
-  delay(100);
-  digitalWrite(greenPin,LOW);
-  digitalWrite(bluePin,HIGH);
-  delay(100);
-  digitalWrite(bluePin,LOW);
-}
