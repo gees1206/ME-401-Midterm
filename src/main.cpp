@@ -120,58 +120,58 @@ void loop() {
   D_print("    OUTPUT:"); D_println(getOutput1());
 
 
-  // while (Serial.available() > 0) // check serial monitor for input
-  // {
-  //   // read the incoming byte:
-  //   int incomingByte = Serial.read();
+  while (Serial.available() > 0) // check serial monitor for input
+  {
+    // read the incoming byte:
+    int incomingByte = Serial.read();
 
-  //   // say what you got:
-  //   if (incomingByte == 'a')
-  //   {      
-  //     setpoint += 300; 
-  //     setSetpoint1(setpoint);
-  //   }
-  //   else if (incomingByte == 'z')
-  //   {
-  //     setpoint -= 300;
-  //     setSetpoint1(setpoint);
-  //   }            
-  //   else if (incomingByte == 'o')
-  //   {
-  //     // kp +=0.5;
-  //     // myPID.SetTunings(kp,ki,kd);
-  //   }
-  //   else if (incomingByte == 'o')
-  //   {
-  //     // kp -=0.1;
-  //     // myPID.SetTunings(kp,ki,kd);
-  //   }
-  //   else if (incomingByte == 't')
-  //   {
-  //     pos = pos+5;
-  //     servo1.write(pos);  
-  //     servo2.write(pos);  
-  //   }
-  //   else if (incomingByte == 'g')
-  //   {
-  //     pos = pos-5;
-  //     servo1.write(pos);  
-  //     servo2.write(pos);  
-  //   }
-  //   else if (incomingByte == 'f')
-  //   {
-  //     servo3.writeMicroseconds(1700);  
-  //     servo4.writeMicroseconds(1700);  
-  //   }
-  //   else if (incomingByte == 'b')
-  //   {
-  //     servo3.writeMicroseconds(1300);  
-  //     servo4.writeMicroseconds(1300);  
-  //   }
-  //   else{
-  //     break;
-  //   }
-  // }
+    // say what you got:
+    if (incomingByte == 'a')
+    {      
+      setpoint += 300; 
+      setSetpoint1(setpoint);
+    }
+    else if (incomingByte == 'z')
+    {
+      setpoint -= 300;
+      setSetpoint1(setpoint);
+    }            
+    else if (incomingByte == 'o')
+    {
+      // kp +=0.5;
+      // myPID.SetTunings(kp,ki,kd);
+    }
+    else if (incomingByte == 'o')
+    {
+      // kp -=0.1;
+      // myPID.SetTunings(kp,ki,kd);
+    }
+    else if (incomingByte == 't')
+    {
+      pos = pos+5;
+      servo1.write(pos);  
+      servo2.write(pos);  
+    }
+    else if (incomingByte == 'g')
+    {
+      pos = pos-5;
+      servo1.write(pos);  
+      servo2.write(pos);  
+    }
+    else if (incomingByte == 'f')
+    {
+      servo3.writeMicroseconds(1700);  
+      servo4.writeMicroseconds(1700);  
+    }
+    else if (incomingByte == 'b')
+    {
+      servo3.writeMicroseconds(1300);  
+      servo4.writeMicroseconds(1300);  
+    }
+    else{
+      break;
+    }
+  }
 
   //Get robot pose and ball position*
   //*Not yet implemented
