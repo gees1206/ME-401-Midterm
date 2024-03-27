@@ -256,8 +256,8 @@ void loop() {
   //707*gain linear, 3141*gain rotational, 
 
   //Mapping values based on absolute maximum error, narrowing the range is a good idea.
-  servo3.writeMicroseconds(map(omega_1, -707, 707, 1300, 1700));
-  servo4.writeMicroseconds(map(omega_2, -707,707, 1300, 1700));
+  servo3.writeMicroseconds(map(omega_1, 707,-707, 1300, 1700));
+  servo4.writeMicroseconds(map(omega_2, 707,-707, 1300, 1700));
 
   // int a = analogRead(36);
   // Serial.printf("Left Switch: %d\n", a);
@@ -269,7 +269,7 @@ void loop() {
   //Once we're close, drive forward slowly while lowering the gate
   if(rooterror <= 15){
     servo3.writeMicroseconds((1525));
-    servo4.writeMicroseconds((-1525));
+    servo4.writeMicroseconds((1525));
     servo1.writeMicroseconds(70);
   }
 
