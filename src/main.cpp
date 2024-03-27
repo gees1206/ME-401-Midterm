@@ -220,10 +220,10 @@ void loop() {
   //Calculate the distance to the desired ball position
   //Need to find closest ball and then update to get us towards the ball.
   //Still need to figure out the logic for the first time through the loop if necessary.
-  int nearestball;
-  double balldistance;
-  int closest;
-  double closestdistance;
+  int nearestball=0;
+  double balldistance=0;
+  int closest=0;
+  double closestdistance=99999;
   for(int i = 0; i < numBalzz; i++){
     balldistance = sqrt((x-balzz[i].x)^2 + (y-balzz[i].y)^2);
     if(balldistance < closestdistance){
@@ -269,7 +269,7 @@ void loop() {
   //Once we're close, drive forward slowly while lowering the gate
   if(rooterror <= 15){
     servo3.writeMicroseconds((1525));
-    servo4.writeMicroseconds((1525));
+    servo4.writeMicroseconds((1475));
     servo1.writeMicroseconds(70);
   }
 
