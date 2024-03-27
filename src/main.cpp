@@ -7,6 +7,11 @@
 #include "communications.h"
 #include "stdint.h"
 
+//Austin Writing his stupid ass concerns:
+//I've made the rotational gain twice of the directional but I still worry directional will dominate, and 
+//potentially make us just go forward.
+
+
 //Successfully created a git repository
 
 
@@ -42,7 +47,7 @@ int prev_error_theta = 0;
 
 int Kp1 = 1;
 int Kd1 = 0.1;
-int Kp2 = 1;
+int Kp2 = 2;
 int Kd2 = 0.1;
 int omega_1;
 int omega_2;
@@ -213,8 +218,22 @@ void loop() {
   }
 
   //Calculate the distance to the desired ball position
-  d_x = 500; 
-  d_y = 500;
+  //Need to find closest ball and then update to get us towards the ball.
+  //Still need to figure out the logic for the first time through the loop if necessary.
+  int nearestball;
+  double balldistance;
+  int closest;
+  double closestdistance;
+  for(int i = 0; i < numBalzz; i++){
+    balldistance = sqrt((x-balzz[i].x)^2 + (y-balzz[i].y)^2);
+    if(balldistance < closestdistance){
+      nearestball = i;
+    }
+
+  }
+
+  d_x = balzz[nearestball].x; 
+  d_y = balzz[nearestball].y;
   error_x = d_x - x;
   error_y = d_y - y;
   error_d = sqrt(error_x^2+error_y^2);
@@ -251,10 +270,11 @@ void loop() {
   if(rooterror <= 15){
     servo3.writeMicroseconds((1525));
     servo4.writeMicroseconds((-1525));
-    servo1.writeMicroseconds(1100);
+    servo1.writeMicroseconds(70);
   }
 
 
 
 }
+
 
