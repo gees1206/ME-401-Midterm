@@ -257,7 +257,7 @@ void loop() {
 
   //Mapping values based on absolute maximum error, narrowing the range is a good idea.
   servo3.writeMicroseconds(map(omega_1, -707, 707, 1300, 1700));
-  servo4.writeMicroseconds(map(omega_2, 707,-707, 1300, 1700));
+  servo4.writeMicroseconds(map(omega_2, -707,707, 1300, 1700));
 
   // int a = analogRead(36);
   // Serial.printf("Left Switch: %d\n", a);
