@@ -14,8 +14,9 @@
 
 //Successfully created a git repository
 
-
+//servo 3 is right servo
 //TODO
+//Print out positional and distance data, as well as the outputs to motors so we can fiddle with the orientations and stuff.
 //Calibrate the Color sensor
 //Finish PID tuning the IR sensor
 //Calibrate the IR sensor
