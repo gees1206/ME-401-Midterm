@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-#include "debug.h"
+//#include "debug.h"
 #include "common.h"
 #include "dc_motors.h"
 #include "servo_motors.h"
@@ -11,12 +11,11 @@
 //I've made the rotational gain twice of the directional but I still worry directional will dominate, and 
 //potentially make us just go forward.
 
-
+//servo3 r
 //Successfully created a git repository
 
-//servo 3 is right servo
+
 //TODO
-//Print out positional and distance data, as well as the outputs to motors so we can fiddle with the orientations and stuff.
 //Calibrate the Color sensor
 //Finish PID tuning the IR sensor
 //Calibrate the IR sensor
@@ -47,9 +46,9 @@ int prev_error_d = 0;
 int prev_error_theta = 0;
 
 int Kp1 = 1;
-int Kd1 = 0.1;
-int Kp2 = 2;
-int Kd2 = 0.1;
+int Kd1 = 1;
+int Kp2 = 1;
+int Kd2 = 1;
 int omega_1;
 int omega_2;
 
@@ -102,8 +101,8 @@ void setup() {
   //servo1.writeMicroseconds(1700);
   servo2.writeMicroseconds(1700);
 
-  servo3.attach(SERVO3_PIN, 1300, 1700);  //Movement servos
-  servo4.attach(SERVO4_PIN, 1300, 1700);
+  servo3.attach(SERVO3_PIN, 1300, 1700);  //rigt
+  servo4.attach(SERVO4_PIN, 1300, 1700);  //ligt
   servo3.writeMicroseconds(1500); //Servos 0 velocity
   servo4.writeMicroseconds(1500);
 }
@@ -113,43 +112,41 @@ extern double output1;
 
 void loop() {
 
-  
-  Serial.begin(115200);
-
   //Sensor Data
-  printf("%d IR distance\n", analogRead(irSensor1Pin));
-  printf("%d color\n", analogRead(sensorPin));
+  //printf(" %d IR distance\n ", analogRead(irSensor1Pin));
+  //printf("%d color\n", analogRead(sensorPin));
+
   //printf("%d Limit1\n", digitalRead(limit1));
   //printf("%d Limit2\n", digitalRead(limit2));
 
   //Setup RGB LED blinking
   digitalWrite(redPin,HIGH);
-  delay(50);
+  //delay(50);
   digitalWrite(redPin,LOW);
   digitalWrite(greenPin,HIGH);
-  delay(50);
+  //delay(50);
   digitalWrite(greenPin,LOW);
   digitalWrite(bluePin,HIGH);
-  delay(50);
+  //delay(50);
   digitalWrite(bluePin,LOW);
 
   // DC motors
-  D_print("SETPOINT:"); D_print(getSetpoint1()); D_print("   POS:"); D_print(getPosition1()); D_print("    ERR:"); D_print(getError1());
-  D_print("    OUTPUT:"); D_println(getOutput1());
+  // D_print("SETPOINT:"); D_print(getSetpoint1()); D_print("   POS:"); D_print(getPosition1()); D_print("    ERR:"); D_print(getError1());
+  // D_print("    OUTPUT:"); D_println(getOutput1());
   
 
   //*****************************************************************************************
   //Printing information about what we have and where
   //*****************************************************************************************
-  Serial.printf("/%d Numballs\n", ballNum);
+  //Serial.printf("/%d Numballs\n", ballNum);
   
   
   RobotPose jimmy = getRobotPose(10);
-  Serial.printf("#%d\tx:%d\ty:%d\n", jimmy.ID,jimmy.x,jimmy.y);
+  //Serial.printf("#%d\tx:%d\ty:%d\n", jimmy.ID,jimmy.x,jimmy.y);
   BallPosition balzz[20];
   int numBalzz = getBallPositions(balzz);
   for(int i =0; i < numBalzz; i++){
-    Serial.printf("c:%d\tx:%d\ty:%d\n", balzz[i].hue,balzz[i].x,balzz[i].y);
+    //Serial.printf("c:%d\tx:%d\ty:%d\n", balzz[i].hue,balzz[i].x,balzz[i].y);
   } 
   //*****************************************************************************************
 
@@ -215,7 +212,7 @@ void loop() {
     theta = pose.theta;
   }
   else {
-    Serial.println("Pose not valid");
+    //Serial.println("Pose not valid");
   }
 
   //Calculate the distance to the desired ball position
@@ -238,7 +235,7 @@ void loop() {
   error_x = d_x - x;
   error_y = d_y - y;
   error_d = sqrt(error_x^2+error_y^2);
-  error_theta = (atan2(error_y,error_x) - theta)*(180/(PI*1000));
+  error_theta = (1000*atan2(error_y,error_x) - theta)*(180/(PI*1000));
 
   if (error_theta < -180){
     error_theta = error_theta + 360;
@@ -247,19 +244,24 @@ void loop() {
     error_theta = error_theta - 360;
   }
   
+  Serial.printf("theta: %d , dist: %d\n", error_theta,error_d);
+
+  Kp1 = 5;
+  Kp2 = 5;
   //Drive towards closest ball position proportional controller, 
-  omega_1 = (Kp1*error_d + Kp2*error_theta); //+ Kd1*(error_d-prev_error_d) - Kd2*(error_theta - prev_error_theta));
-  omega_2 = -(Kp1*error_d + Kp2*error_theta); //+ Kd1*(error_d-prev_error_d) + Kd2*(error_theta - prev_error_theta));
+  omega_1 = 0.5*(Kp1*error_d + Kp2*error_theta); //+ Kd1*(error_d-prev_error_d) - Kd2*(error_theta - prev_error_theta));
+  omega_2 = -0.5*(Kp1*error_d + Kp2*error_theta); //+ Kd1*(error_d-prev_error_d) + Kd2*(error_theta - prev_error_theta));
   prev_error_d = error_d;
   prev_error_theta = error_theta;
+
+  
 
   //Hypothetical maximum omegas:
   //707*gain linear, 3141*gain rotational, 
 
   //Mapping values based on absolute maximum error, narrowing the range is a good idea.
   servo3.writeMicroseconds(map(omega_1, 707,-707, 1300, 1700));
-  servo4.writeMicroseconds(map(omega_2, 707,-707, 1300, 1700));
-
+  servo4.writeMicroseconds(map(omega_2, -707,707, 1300, 1700));
   // int a = analogRead(36);
   // Serial.printf("Left Switch: %d\n", a);
   // int b = analogRead(39);
@@ -268,10 +270,10 @@ void loop() {
   //Now grabbing the ball:
   double rooterror = sqrt(error_x * error_x + error_y * error_y);
   //Once we're close, drive forward slowly while lowering the gate
-  if(rooterror <= 15){
+  if(rooterror <= 1){
     servo3.writeMicroseconds((1525));
     servo4.writeMicroseconds((1475));
-    servo1.writeMicroseconds(70);
+    //servo1.writeMicroseconds(70);
   }
 
 
