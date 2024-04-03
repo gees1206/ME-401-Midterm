@@ -45,10 +45,10 @@ int error_theta;
 int prev_error_d = 0;
 int prev_error_theta = 0;
 
-int Kp1 = 1;
-int Kd1 = 1;
-int Kp2 = 1;
-int Kd2 = 1;
+double Kp1 = 1;
+double Kd1 = 1;
+double Kp2 = 1;
+double Kd2 = 1;
 int omega_1;
 int omega_2;
 
@@ -221,7 +221,7 @@ void loop() {
   int nearestball=0;
   double balldistance=0;
   int closest=0;
-  double closestdistance=99999;
+  double closestdistance=999;
   for(int i = 0; i < numBalzz; i++){
     balldistance = sqrt((x-balzz[i].x)^2 + (y-balzz[i].y)^2);
     if(balldistance < closestdistance){
@@ -244,7 +244,7 @@ void loop() {
     error_theta = error_theta - 360;
   }
   
-  Serial.printf("theta: %d , dist: %d\n", error_theta,error_d);
+  Serial.printf("theta: %d , dist: %d , roboX: %d , roboY %d , BX: %d , BY %d\n", error_theta,error_d,x,y,d_x,d_y);
 
   Kp1 = 5;
   Kp2 = 5;
