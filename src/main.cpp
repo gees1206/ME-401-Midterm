@@ -30,32 +30,22 @@
 //kd = 5
 
 //Communications and positional
-int myID = 10;
-int x;
-int y;
-int theta;
+int myID = 10; 
+int x; int y; int theta;
 int ballNum;
 
-int d_x;
-int d_y;
-int error_x;
-int error_y;
-int error_d;
-int error_theta;
-int prev_error_d = 0;
-int prev_error_theta = 0;
+int d_x; int d_y;
+int error_x; int error_y;
+int error_d; int prev_error_d = 0;
+int error_theta; int prev_error_theta = 0;
 
-double Kp1 = 1;
-double Kd1 = 1;
-double Kp2 = 1;
-double Kd2 = 1;
-int omega_1;
-int omega_2;
+double Kp1 = 1; //double Kd1 = 1;
+double Kp2 = 1; //double Kd2 = 1;
+int omega_1; int omega_2;
 
 //IR sensor stuff
 double kp =21; double ki=151; double kd=.263; 
-double setpoint = 0;
-int pos = 0;
+double setpoint = 0; int pos = 0;
 int irSensor1Pin=34;
 
 //limit switch stuff
@@ -107,7 +97,6 @@ void setup() {
   servo4.writeMicroseconds(1500);
 }
 
-
 extern double output1;
 
 void loop() {
@@ -130,6 +119,12 @@ void loop() {
   //delay(50);
   digitalWrite(bluePin,LOW);
 
+
+  // int a = analogRead(36);
+  // Serial.printf("Left Switch: %d\n", a);
+  // int b = analogRead(39);
+  // Serial.printf("Right Switch: %d\n", b);
+
   // DC motors
   // D_print("SETPOINT:"); D_print(getSetpoint1()); D_print("   POS:"); D_print(getPosition1()); D_print("    ERR:"); D_print(getError1());
   // D_print("    OUTPUT:"); D_println(getOutput1());
@@ -150,59 +145,6 @@ void loop() {
   } 
   //*****************************************************************************************
 
-  // while (Serial.available() > 0) // check serial monitor for input
-  // {
-  //   // read the incoming byte:
-  //   int incomingByte = Serial.read();
-
-  //   // say what you got:
-  //   if (incomingByte == 'a')
-  //   {      
-  //     setpoint += 300; 
-  //     setSetpoint1(setpoint);
-  //   }
-  //   else if (incomingByte == 'z')
-  //   {
-  //     setpoint -= 300;
-  //     setSetpoint1(setpoint);
-  //   }            
-  //   else if (incomingByte == 'o')
-  //   {
-  //     // kp +=0.5;
-  //     // myPID.SetTunings(kp,ki,kd);
-  //   }
-  //   else if (incomingByte == 'o')
-  //   {
-  //     // kp -=0.1;
-  //     // myPID.SetTunings(kp,ki,kd);
-  //   }
-  //   else if (incomingByte == 't')
-  //   {
-  //     pos = pos+5;
-  //     servo1.write(pos);  
-  //     servo2.write(pos);  
-  //   }
-  //   else if (incomingByte == 'g')
-  //   {
-  //     pos = pos-5;
-  //     servo1.write(pos);  
-  //     servo2.write(pos);  
-  //   }
-  //   else if (incomingByte == 'f')
-  //   {
-  //     servo3.writeMicroseconds(1700);  
-  //     servo4.writeMicroseconds(1700);  
-  //   }
-  //   else if (incomingByte == 'b')
-  //   {
-  //     servo3.writeMicroseconds(1300);  
-  //     servo4.writeMicroseconds(1300);  
-  //   }
-  //   else{
-  //     break;
-  //   }
-  // }
-
   //Get robot pose and ball position*
   //*Not yet implemented
   RobotPose pose = getRobotPose(myID);
@@ -212,7 +154,7 @@ void loop() {
     theta = pose.theta;
   }
   else {
-    //Serial.println("Pose not valid");
+    Serial.println("Pose not valid");
   }
 
   //Calculate the distance to the desired ball position
@@ -227,7 +169,6 @@ void loop() {
     if(balldistance < closestdistance){
       nearestball = i;
     }
-
   }
 
   d_x = balzz[nearestball].x; 
@@ -254,18 +195,12 @@ void loop() {
   prev_error_d = error_d;
   prev_error_theta = error_theta;
 
-  
-
   //Hypothetical maximum omegas:
   //707*gain linear, 3141*gain rotational, 
 
   //Mapping values based on absolute maximum error, narrowing the range is a good idea.
   servo3.writeMicroseconds(map(omega_1, 707,-707, 1300, 1700));
   servo4.writeMicroseconds(map(omega_2, -707,707, 1300, 1700));
-  // int a = analogRead(36);
-  // Serial.printf("Left Switch: %d\n", a);
-  // int b = analogRead(39);
-  // Serial.printf("Right Switch: %d\n", b);
   
   //Now grabbing the ball:
   double rooterror = sqrt(error_x * error_x + error_y * error_y);
@@ -275,9 +210,6 @@ void loop() {
     servo4.writeMicroseconds((1475));
     //servo1.writeMicroseconds(70);
   }
-
-
-
 }
 
 
