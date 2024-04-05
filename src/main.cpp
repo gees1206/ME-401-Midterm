@@ -47,6 +47,7 @@ int omega_1; int omega_2;
 double kp =21; double ki=151; double kd=.263; 
 double setpoint = 0; int pos = 0;
 int irSensor1Pin=34;
+extern double output1;
 
 //limit switch stuff
 int limit1 = 36; // left
@@ -60,7 +61,6 @@ int redPin = 32;
 int maxblack[]={3536,2895,3313};
 int minwhite[]={3264,2468,2865};
 int color[]={0,0,0};
-
 
 void setup() {
   
@@ -97,10 +97,7 @@ void setup() {
   servo4.writeMicroseconds(1500);
 }
 
-extern double output1;
-
 void loop() {
-
   //Sensor Data
   //printf(" %d IR distance\n ", analogRead(irSensor1Pin));
   //printf("%d color\n", analogRead(sensorPin));
@@ -119,7 +116,6 @@ void loop() {
   //delay(50);
   digitalWrite(bluePin,LOW);
 
-
   // int a = analogRead(36);
   // Serial.printf("Left Switch: %d\n", a);
   // int b = analogRead(39);
@@ -128,7 +124,6 @@ void loop() {
   // DC motors
   // D_print("SETPOINT:"); D_print(getSetpoint1()); D_print("   POS:"); D_print(getPosition1()); D_print("    ERR:"); D_print(getError1());
   // D_print("    OUTPUT:"); D_println(getOutput1());
-  
 
   //*****************************************************************************************
   //Printing information about what we have and where
@@ -140,7 +135,7 @@ void loop() {
   //Serial.printf("#%d\tx:%d\ty:%d\n", jimmy.ID,jimmy.x,jimmy.y);
   BallPosition balzz[20];
   int numBalzz = getBallPositions(balzz);
-  for(int i =0; i < numBalzz; i++){
+  for(int i = 0; i < numBalzz; i++){
     //Serial.printf("c:%d\tx:%d\ty:%d\n", balzz[i].hue,balzz[i].x,balzz[i].y);
   } 
   //*****************************************************************************************
@@ -171,7 +166,7 @@ void loop() {
     }
   }
 
-  d_x = balzz[nearestball].x; 
+  d_x = balzz[nearestball].x;
   d_y = balzz[nearestball].y;
   error_x = d_x - x;
   error_y = d_y - y;
@@ -184,16 +179,15 @@ void loop() {
   else if (error_theta > 180){
     error_theta = error_theta - 360;
   }
-  
-  Serial.printf("theta: %d , dist: %d , roboX: %d , roboY %d , BX: %d , BY %d\n", error_theta,error_d,x,y,d_x,d_y);
+  // Serial.printf("theta: %d , dist: %d , roboX: %d , roboY %d , BX: %d , BY %d\n", error_theta,error_d,x,y,d_x,d_y);
 
-  Kp1 = 5;
-  Kp2 = 5;
+  Kp1 = 5; Kp2 = 5;
   //Drive towards closest ball position proportional controller, 
   omega_1 = 0.5*(Kp1*error_d + Kp2*error_theta); //+ Kd1*(error_d-prev_error_d) - Kd2*(error_theta - prev_error_theta));
   omega_2 = -0.5*(Kp1*error_d + Kp2*error_theta); //+ Kd1*(error_d-prev_error_d) + Kd2*(error_theta - prev_error_theta));
-  prev_error_d = error_d;
-  prev_error_theta = error_theta;
+  // prev_error_d = error_d;
+  // prev_error_theta = error_theta;
+  Serial.printf("Omega_1: %d, Omega_2: %d", omega_1, omega_2);
 
   //Hypothetical maximum omegas:
   //707*gain linear, 3141*gain rotational, 
