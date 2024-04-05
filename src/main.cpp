@@ -175,7 +175,7 @@ void loop() {
 
   error_x = d_x - x;
   error_y = d_y - y;
-  error_d = sqrt(error_x^2+error_y^2);
+  error_d = sqrt(error_x*error_x+error_y*error_y);
   error_theta = (1000*atan2(error_y,error_x) - theta)*(180/(PI*1000));
 
   if (error_theta < -180){
