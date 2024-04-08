@@ -150,6 +150,7 @@ void loop() {
   }
   else {
     Serial.println("Pose not valid");
+    return;
   }
 
   //Calculate the distance to the desired ball position
@@ -160,7 +161,7 @@ void loop() {
   int closest=0;
   double closestdistance=999;
   for(int i = 0; i < numBalzz; i++){
-    balldistance = sqrt((x-balzz[i].x)^2 + (y-balzz[i].y)^2);
+    balldistance = sqrt((x-balzz[i].x)*(x-balzz[i].x) + (y-balzz[i].y)*(y-balzz[i].y));
     if(balldistance < closestdistance){
       nearestball = i;
     }
@@ -169,14 +170,16 @@ void loop() {
   d_x = balzz[nearestball].x;
   d_y = balzz[nearestball].y;
 
-  //Ball set to a solid point
-  d_x = 5;
-  d_y = 5;
+
+  // //Ball set to a solid point
+  // d_x = 0;
+  // d_y = 0;
+  Serial.printf("\n Ballpos: %d, %d",d_x,d_y);
 
   error_x = d_x - x;
   error_y = d_y - y;
-  error_d = sqrt(error_x*error_x+error_y*error_y);
-  error_theta = (1000*atan2(error_y,error_x) - theta)*(180/(PI*1000));
+  error_d = sqrt(error_x*error_x + error_y*error_y);
+  error_theta = (1000*atan2(error_y, error_x) - theta)*(180/(PI*1000));
 
   if (error_theta < -180){
     error_theta = error_theta + 360;
@@ -184,32 +187,32 @@ void loop() {
   else if (error_theta > 180){
     error_theta = error_theta - 360;
   }
-  // Serial.printf("theta: %d , dist: %d , roboX: %d , roboY %d , BX: %d , BY %d\n", error_theta,error_d,x,y,d_x,d_y);
+  // Serial.printf(" theta: %d , dist: %d , roboX: %d , roboY %d , BX: %d , BY %d\n", error_theta,error_d,x,y,d_x,d_y);
 
-  Kp1 = 0; //Driving to ball is 0
+  Kp1 = 0.15; //Driving to ball is 0
   Kp2 = 1; //Rotating/pointing to ball
   //Drive towards closest ball position proportional controller, 
-  omega_1 = 0.5*(Kp1*error_d - Kp2*error_theta); //+ Kd1*(error_d-prev_error_d) - Kd2*(error_theta - prev_error_theta));
-  omega_2 = 0.5*(Kp1*error_d + Kp2*error_theta); //+ Kd1*(error_d-prev_error_d) + Kd2*(error_theta - prev_error_theta));
+  omega_1 = 0.5*(-Kp1*error_d - Kp2*error_theta); //+ Kd1*(error_d-prev_error_d) - Kd2*(error_theta - prev_error_theta));
+  omega_2 = 0.5*(-Kp1*error_d + Kp2*error_theta); //+ Kd1*(error_d-prev_error_d) + Kd2*(error_theta - prev_error_theta));
   // prev_error_d = error_d;
   // prev_error_theta = error_theta;
-  Serial.printf("Omega_1: %d, Omega_2: %d", omega_1, omega_2);
+  //Serial.printf("Omega_1: %d, Omega_2: %d", omega_1, omega_2);
 
   //Hypothetical maximum omegas:
   //707*gain linear, 3141*gain rotational, 
 
   //Mapping values based on absolute maximum error, narrowing the range is a good idea.
-  servo3.writeMicroseconds(omega_1+1500);
-  servo4.writeMicroseconds(-omega_2+1500);
+  servo3.writeMicroseconds(omega_1 + 1500);
+  servo4.writeMicroseconds(-omega_2 + 1500);
   
-  //Now grabbing the ball:
-  double rooterror = sqrt(error_x * error_x + error_y * error_y);
-  //Once we're close, drive forward slowly while lowering the gate
-  if(rooterror <= 1){
-    servo3.writeMicroseconds((1525));
-    servo4.writeMicroseconds((1475));
-    //servo1.writeMicroseconds(70);
-  }
+  // //Now grabbing the ball:
+  // double rooterror = sqrt(error_x * error_x + error_y * error_y);
+  // //Once we're close, drive forward slowly while lowering the gate
+  // if(rooterror <= 1){
+  //   servo3.writeMicroseconds((1525));
+  //   servo4.writeMicroseconds((1475));
+  //   //servo1.writeMicroseconds(70);
+  // }
 }
 
 
