@@ -1,4 +1,4 @@
-/*#include <Arduino.h>
+#include <Arduino.h>
 
 //#include "debug.h"
 #include "common.h"
@@ -30,7 +30,7 @@
 //kd = 5
 
 //Communications and positional
-int myID = 10; 
+int myID = 10;
 int x; int y; int theta;
 int ballNum;
 
@@ -172,7 +172,6 @@ void loop() {
   d_x = balzz[nearestball].x;
   d_y = balzz[nearestball].y;
 
-
   // //Ball set to a solid point
   // d_x = 0;
   // d_y = 0;
@@ -220,6 +219,24 @@ void loop() {
   // servo4.writeMicroseconds(1500);
    servo2.write(115);
   }
+
+  // We want to avoid obstacles as we go along
+  // Interrupts for switches, Interrupt for ir-sensor
+
+  int state = 0;
+  switch(state){
+    case 0:
+      // Do nothing
+      break;
+    case 1:
+      // Capture the ball
+      break;
+    case 2:
+      // Shoot the ball
+      break;
+    case 3:
+      // Defend
+      break;
+  }
 }
 
-*/
