@@ -1,4 +1,4 @@
-#include <Arduino.h>
+/*#include <Arduino.h>
 
 //#include "debug.h"
 #include "common.h"
@@ -55,9 +55,9 @@ int limit2 = 39; // right
 
 //LED and sensor pin setup
 int sensorPin = 34;      
-int bluePin = 33;        
-int greenPin = 27;      
-int redPin = 32;
+int bluePin = 23;        
+int greenPin = 22;      
+int redPin = 19;
 int maxblack[]={3536,2895,3313};
 int minwhite[]={3264,2468,2865};
 int color[]={0,0,0};
@@ -89,7 +89,7 @@ void setup() {
   servo1.attach(SERVO1_PIN, 500, 2400);
   servo2.attach(SERVO2_PIN, 500, 2400);   //Servo 2 is shooter
   //servo1.writeMicroseconds(1700);
-  servo2.writeMicroseconds(1700);
+  servo2.write(115);
 
   servo3.attach(SERVO3_PIN, 1300, 1700);  //rigt
   servo4.attach(SERVO4_PIN, 1300, 1700);  //ligt
@@ -107,13 +107,13 @@ void loop() {
 
   //Setup RGB LED blinking
   digitalWrite(redPin,HIGH);
-  //delay(50);
+  delay(1);
   digitalWrite(redPin,LOW);
   digitalWrite(greenPin,HIGH);
-  //delay(50);
+  delay(1);
   digitalWrite(greenPin,LOW);
   digitalWrite(bluePin,HIGH);
-  //delay(50);
+  delay(1);
   digitalWrite(bluePin,LOW);
 
   // int a = analogRead(36);
@@ -150,6 +150,8 @@ void loop() {
   }
   else {
     Serial.println("Pose not valid");
+    servo3.writeMicroseconds(1500); //Servos 0 velocity
+    servo4.writeMicroseconds(1500);
     return;
   }
 
@@ -174,7 +176,7 @@ void loop() {
   // //Ball set to a solid point
   // d_x = 0;
   // d_y = 0;
-  Serial.printf("\n Ballpos: %d, %d",d_x,d_y);
+  //Serial.printf("\n Ballpos: %d, %d",d_x,d_y);
 
   error_x = d_x - x;
   error_y = d_y - y;
@@ -187,10 +189,10 @@ void loop() {
   else if (error_theta > 180){
     error_theta = error_theta - 360;
   }
-  // Serial.printf(" theta: %d , dist: %d , roboX: %d , roboY %d , BX: %d , BY %d\n", error_theta,error_d,x,y,d_x,d_y);
+  Serial.printf(" theta: %d , dist: %d , roboX: %d , roboY %d , BX: %d , BY %d\n", error_theta,error_d,x,y,d_x,d_y);
 
-  Kp1 = 0.15; //Driving to ball is 0
-  Kp2 = 1; //Rotating/pointing to ball
+  Kp1 = 0.5; //Driving to ball is 0
+  Kp2 = 4.0; //Rotating/pointing to ball
   //Drive towards closest ball position proportional controller, 
   omega_1 = 0.5*(-Kp1*error_d - Kp2*error_theta); //+ Kd1*(error_d-prev_error_d) - Kd2*(error_theta - prev_error_theta));
   omega_2 = 0.5*(-Kp1*error_d + Kp2*error_theta); //+ Kd1*(error_d-prev_error_d) + Kd2*(error_theta - prev_error_theta));
@@ -201,18 +203,23 @@ void loop() {
   //Hypothetical maximum omegas:
   //707*gain linear, 3141*gain rotational, 
 
-  //Mapping values based on absolute maximum error, narrowing the range is a good idea.
-  servo3.writeMicroseconds(omega_1 + 1500);
-  servo4.writeMicroseconds(-omega_2 + 1500);
   
-  // //Now grabbing the ball:
-  // double rooterror = sqrt(error_x * error_x + error_y * error_y);
-  // //Once we're close, drive forward slowly while lowering the gate
-  // if(rooterror <= 1){
-  //   servo3.writeMicroseconds((1525));
-  //   servo4.writeMicroseconds((1475));
-  //   //servo1.writeMicroseconds(70);
-  // }
+  
+  //Now grabbing the ball:
+  //Once we're close, drive forward slowly while lowering the gate
+  if((error_d <= 200) && (abs(error_theta) < 12)){
+    servo3.writeMicroseconds(1475);
+    servo4.writeMicroseconds(1525);
+    servo2.write(52);
+  }
+  else{
+  //Mapping values based on absolute maximum error, narrowing the range is a good idea.
+   servo3.writeMicroseconds(omega_1 + 1500);
+   servo4.writeMicroseconds(-omega_2 + 1500);
+   //servo3.writeMicroseconds(1500);
+  // servo4.writeMicroseconds(1500);
+   servo2.write(115);
+  }
 }
 
-
+*/
