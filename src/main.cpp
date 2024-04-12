@@ -222,6 +222,12 @@ void loop() {
     case 3: // Defend
       /*
         Not implemented, same as stop for now
+
+        Should be: 
+        Go to a point in front of the goal
+
+        driveToPoint(pose, x, y);
+        }
       */
       servo3.writeMicroseconds(1500); //Servos 0 velocity
       servo4.writeMicroseconds(1500);
@@ -230,3 +236,59 @@ void loop() {
   }
 }
 
+void driveToPoint(RobotPose pose, int x, int y){
+  // Coordinates of the desired point
+  d_x = x;
+  d_y = y;
+  
+  // Pose of the robot
+  x = pose.x;
+  y = pose.y;
+  theta = pose.theta;
+
+  error_x = d_x - x;
+  error_y = d_y - y;
+  error_d = sqrt((error_x * error_x) + (error_y * error_y));
+  error_theta = ((1000*atan2(error_y, error_x)) - theta) * (180 / (PI*1000));
+
+  if (error_theta < -180){
+    error_theta = error_theta + 360;
+  }
+  else if (error_theta > 180){
+    error_theta = error_theta - 360;
+  }
+  Serial.printf(" theta: %d , dist: %d , roboX: %d , roboY %d , BX: %d , BY %d\n", error_theta, error_d, x, y, d_x, d_y);
+
+  Kp1 = 0.5; //Driving to ball
+  Kp2 = 4.0; //Rotating/pointing to ball
+
+  // Drive towards closest ball position proportional controller, 
+  omega_1 = 0.5*(-Kp1*error_d - Kp2*error_theta);
+  omega_2 = 0.5*(-Kp1*error_d + Kp2*error_theta);
+  // Serial.printf("Omega_1: %d, Omega_2: %d", omega_1, omega_2);
+
+  servo3.writeMicroseconds(omega_1 + 1500);
+  servo4.writeMicroseconds(-omega_2 + 1500);
+}
+
+void driveToNearestBall(BallPosition balzz[20], int numBalzz, RobotPose pose) {
+  // Calculate the distance to the closest ball position
+  int nearestball = 0;
+  double balldistance = 0;
+  int closest = 0;
+  double closestdistance = 999;
+  for(int i = 0; i < numBalzz; i++){
+    balldistance = sqrt((x-balzz[i].x)*(x-balzz[i].x) + (y-balzz[i].y)*(y-balzz[i].y));
+    if(balldistance < closestdistance){
+      nearestball = i;
+      closestdistance = balldistance; //I changed this line here -Gabe
+    }
+  }
+
+  // Coordinates of the closest ball
+  d_x = balzz[nearestball].x;
+  d_y = balzz[nearestball].y;
+
+  // Drive to this nearest ball
+  driveToPoint(pose, d_x, d_y);
+}
