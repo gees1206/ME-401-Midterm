@@ -7,13 +7,6 @@
 #include "communications.h"
 #include "stdint.h"
 
-//Austin Writing his stupid ass concerns:
-//I've made the rotational gain twice of the directional but I still worry directional will dominate, and 
-//potentially make us just go forward.
-
-//servo3 r
-//Successfully created a git repository
-
 
 //TODO
 //Calibrate the Color sensor
@@ -22,6 +15,10 @@
 //Write up the servo nonsense
 //Figure out the web shit processing
 //Path planning, and subroutines for attacking, defending, and shooting?
+
+// We want to avoid obstacles as we go along
+// Interrupts for switches, Interrupt for ir-sensor
+
 
 //tU = .111 seconds
 //ku = 45
@@ -39,14 +36,15 @@ int error_x; int error_y;
 int error_d; int prev_error_d = 0;
 int error_theta; int prev_error_theta = 0;
 
-double Kp1 = 1; //double Kd1 = 1;
-double Kp2 = 1; //double Kd2 = 1;
+// Kd1 = 0.5, Kd2 = 4.0; //Drives and points correctly
+double Kp1 = 0.5;
+double Kp2 = 4.0;
 int omega_1; int omega_2;
 
 //IR sensor stuff
-double kp =21; double ki=151; double kd=.263; 
+double kp = 21; double ki = 151; double kd = 0.263;
 double setpoint = 0; int pos = 0;
-int irSensor1Pin=34;
+int irSensor1Pin = 34;
 extern double output1;
 
 //limit switch stuff
@@ -54,20 +52,26 @@ int limit1 = 36; // left
 int limit2 = 39; // right
 
 //LED and sensor pin setup
-int sensorPin = 34;      
-int bluePin = 23;        
-int greenPin = 22;      
+int sensorPin = 34;
+int bluePin = 23;
+int greenPin = 22;
 int redPin = 19;
-int maxblack[]={3536,2895,3313};
-int minwhite[]={3264,2468,2865};
-int color[]={0,0,0};
+int maxblack[] = {3536,2895,3313};
+int minwhite[] = {3264,2468,2865};
+int color[] = {0,0,0};
+
+//State machine
+int state = 0; //Default state is do nothing
 
 void setup() {
   
   Serial.begin(115200);
 
-  //Leave commented out when testing
+  /*
+    //Comment out when testing outside the 401 room
+  */
   setupCommunications();
+
 
   //Limit switches
   pinMode(limit1, INPUT);
@@ -97,145 +101,119 @@ void setup() {
   servo4.writeMicroseconds(1500);
 }
 
+
 void loop() {
   //Sensor Data
   //printf(" %d IR distance\n ", analogRead(irSensor1Pin));
   //printf("%d color\n", analogRead(sensorPin));
 
-  //printf("%d Limit1\n", digitalRead(limit1));
-  //printf("%d Limit2\n", digitalRead(limit2));
-
-  //Setup RGB LED blinking
-  digitalWrite(redPin,HIGH);
-  delay(1);
-  digitalWrite(redPin,LOW);
-  digitalWrite(greenPin,HIGH);
-  delay(1);
-  digitalWrite(greenPin,LOW);
-  digitalWrite(bluePin,HIGH);
-  delay(1);
-  digitalWrite(bluePin,LOW);
-
-  // int a = analogRead(36);
-  // Serial.printf("Left Switch: %d\n", a);
-  // int b = analogRead(39);
-  // Serial.printf("Right Switch: %d\n", b);
+  // Serial.printf("Left Switch: %d\n", analogRead(36));
+  // Serial.printf("Right Switch: %d\n", analogRead(39));
 
   // DC motors
   // D_print("SETPOINT:"); D_print(getSetpoint1()); D_print("   POS:"); D_print(getPosition1()); D_print("    ERR:"); D_print(getError1());
   // D_print("    OUTPUT:"); D_println(getOutput1());
 
-  //*****************************************************************************************
-  //Printing information about what we have and where
-  //*****************************************************************************************
-  //Serial.printf("/%d Numballs\n", ballNum);
-  
-  
-  RobotPose jimmy = getRobotPose(10);
-  //Serial.printf("#%d\tx:%d\ty:%d\n", jimmy.ID,jimmy.x,jimmy.y);
+
+  /*
+    This is the state variable. It changes the state of our robot.
+    See the switch statements at the end of loop()
+  */
+  state = 1;
+
+
+  //Get robot pose and ball position
+  RobotPose pose = getRobotPose(myID);
   BallPosition balzz[20];
   int numBalzz = getBallPositions(balzz);
-  for(int i = 0; i < numBalzz; i++){
-    //Serial.printf("c:%d\tx:%d\ty:%d\n", balzz[i].hue,balzz[i].x,balzz[i].y);
-  } 
-  //*****************************************************************************************
+  // for(int i = 0; i < numBalzz; i++){
+  //   Serial.printf("c:%d\tx:%d\ty:%d\n", balzz[i].hue,balzz[i].x,balzz[i].y);
+  // } 
 
-  //Get robot pose and ball position*
-  //*Not yet implemented
-  RobotPose pose = getRobotPose(myID);
-  if (pose.valid == true){
+  if (pose.valid == true && numBalzz > 0){ //Check if pose is valid and there are balls, otherwise no point
     x = pose.x;
     y = pose.y;
     theta = pose.theta;
-  }
-  else {
-    Serial.println("Pose not valid");
-    servo3.writeMicroseconds(1500); //Servos 0 velocity
-    servo4.writeMicroseconds(1500);
-    return;
-  }
 
-  //Calculate the distance to the desired ball position
-  //Need to find closest ball and then update to get us towards the ball.
-  //Still need to figure out the logic for the first time through the loop if necessary.
-  int nearestball=0;
-  double balldistance=0;
-  int closest=0;
-  double closestdistance=999;
-  for(int i = 0; i < numBalzz; i++){
-    balldistance = sqrt((x-balzz[i].x)*(x-balzz[i].x) + (y-balzz[i].y)*(y-balzz[i].y));
-    if(balldistance < closestdistance){
-      nearestball = i;
+    //Calculate the distance to the closest ball position
+    int nearestball = 0;
+    double balldistance = 0;
+    int closest = 0;
+    double closestdistance = 999;
+    for(int i = 0; i < numBalzz; i++){
+      balldistance = sqrt((x-balzz[i].x)*(x-balzz[i].x) + (y-balzz[i].y)*(y-balzz[i].y));
+      if(balldistance < closestdistance){
+        nearestball = i;
+        closestdistance = balldistance; //I changed this line here -Gabe
+      }
     }
+
+    //Coordinates of the closest ball
+    d_x = balzz[nearestball].x;
+    d_y = balzz[nearestball].y;
+    // Serial.printf("\n Ballpos: %d, %d",d_x,d_y);
+
+    error_x = d_x - x;
+    error_y = d_y - y;
+    error_d = sqrt((error_x * error_x) + (error_y * error_y));
+    error_theta = ((1000*atan2(error_y, error_x)) - theta) * (180 / (PI*1000));
+
+    if (error_theta < -180){
+      error_theta = error_theta + 360;
+    }
+    else if (error_theta > 180){
+      error_theta = error_theta - 360;
+    }
+    Serial.printf(" theta: %d , dist: %d , roboX: %d , roboY %d , BX: %d , BY %d\n", error_theta, error_d, x, y, d_x, d_y);
+
+    Kp1 = 0.5; //Driving to ball
+    Kp2 = 4.0; //Rotating/pointing to ball
+
+    //Drive towards closest ball position proportional controller, 
+    omega_1 = 0.5*(-Kp1*error_d - Kp2*error_theta);
+    omega_2 = 0.5*(-Kp1*error_d + Kp2*error_theta);
+    // Serial.printf("Omega_1: %d, Omega_2: %d", omega_1, omega_2);
+
+  }
+  else if (numBalzz < 1) { 
+    Serial.println("No more balls");
+    state = 3; //Go defend
+  }
+  else { 
+    Serial.println("Pose not valid");
+    state = 0; //Do nothing (Stop)
   }
 
-  d_x = balzz[nearestball].x;
-  d_y = balzz[nearestball].y;
-
-  // //Ball set to a solid point
-  // d_x = 0;
-  // d_y = 0;
-  //Serial.printf("\n Ballpos: %d, %d",d_x,d_y);
-
-  error_x = d_x - x;
-  error_y = d_y - y;
-  error_d = sqrt(error_x*error_x + error_y*error_y);
-  error_theta = (1000*atan2(error_y, error_x) - theta)*(180/(PI*1000));
-
-  if (error_theta < -180){
-    error_theta = error_theta + 360;
-  }
-  else if (error_theta > 180){
-    error_theta = error_theta - 360;
-  }
-  Serial.printf(" theta: %d , dist: %d , roboX: %d , roboY %d , BX: %d , BY %d\n", error_theta,error_d,x,y,d_x,d_y);
-
-  Kp1 = 0.5; //Driving to ball is 0
-  Kp2 = 4.0; //Rotating/pointing to ball
-  //Drive towards closest ball position proportional controller, 
-  omega_1 = 0.5*(-Kp1*error_d - Kp2*error_theta); //+ Kd1*(error_d-prev_error_d) - Kd2*(error_theta - prev_error_theta));
-  omega_2 = 0.5*(-Kp1*error_d + Kp2*error_theta); //+ Kd1*(error_d-prev_error_d) + Kd2*(error_theta - prev_error_theta));
-  // prev_error_d = error_d;
-  // prev_error_theta = error_theta;
-  //Serial.printf("Omega_1: %d, Omega_2: %d", omega_1, omega_2);
-
-  //Hypothetical maximum omegas:
-  //707*gain linear, 3141*gain rotational, 
-
+  /*
+    This is the main state machine. It determines which state the robot is in.
+    We need to keep track of variable called 'state'!!! and change it when appropriate.
+    i.e. Change it from 
+  */
   
-  
-  //Now grabbing the ball:
-  //Once we're close, drive forward slowly while lowering the gate
-  if((error_d <= 200) && (abs(error_theta) < 12)){
-    servo3.writeMicroseconds(1475);
-    servo4.writeMicroseconds(1525);
-    servo2.write(52);
-  }
-  else{
-  //Mapping values based on absolute maximum error, narrowing the range is a good idea.
-   servo3.writeMicroseconds(omega_1 + 1500);
-   servo4.writeMicroseconds(-omega_2 + 1500);
-   //servo3.writeMicroseconds(1500);
-  // servo4.writeMicroseconds(1500);
-   servo2.write(115);
-  }
-
-  // We want to avoid obstacles as we go along
-  // Interrupts for switches, Interrupt for ir-sensor
-
-  int state = 0;
   switch(state){
-    case 0:
-      // Do nothing
+    case 0: // Do nothing (Stop)
+      servo3.writeMicroseconds(1500); //Servos 0 velocity
+      servo4.writeMicroseconds(1500);
+      servo2.write(115); //Open the gate
       break;
-    case 1:
-      // Capture the ball
+
+    case 1: // Capture the ball
+      if((error_d <= 200) && (abs(error_theta) < 12)){ //Once we're close and pointed correctly, drive forward and lower the gate
+        servo3.writeMicroseconds(1475);
+        servo4.writeMicroseconds(1525);
+        servo2.write(52); //Lower the gate
+      }
+      else{ // Drive to the closest ball
+        servo3.writeMicroseconds(omega_1 + 1500);
+        servo4.writeMicroseconds(-omega_2 + 1500);
+        servo2.write(115); //Open the gate
+      }
       break;
-    case 2:
-      // Shoot the ball
+
+    case 2: // Shoot the ball
       break;
-    case 3:
-      // Defend
+
+    case 3: // Defend
       break;
   }
 }
