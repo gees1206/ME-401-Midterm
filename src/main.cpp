@@ -211,9 +211,21 @@ void loop() {
       break;
 
     case 2: // Shoot the ball
+      /*
+        Not implemented, same as stop for now
+      */
+      servo3.writeMicroseconds(1500); //Servos 0 velocity
+      servo4.writeMicroseconds(1500);
+      servo2.write(115); //Open the gate
       break;
 
     case 3: // Defend
+      /*
+        Not implemented, same as stop for now
+      */
+      servo3.writeMicroseconds(1500); //Servos 0 velocity
+      servo4.writeMicroseconds(1500);
+      servo2.write(115); //Open the gate
       break;
   }
 }
