@@ -3,7 +3,7 @@
 #include "AsyncUDP.h"
 
 //#define DEBUG_RAW_UDP         // when defined raw_UDP information from UDP broadcast will be printed
-#define DEBUG_COMMUNICATIONS    // when defined ball and robot info from camera will be printed Line 160
+// #define DEBUG_COMMUNICATIONS    // when defined ball and robot info from camera will be printed Line 160
 
 const char* ssid = "ME401_MIDTERM";
 const char* pass = "ILOVEROBOTS";
