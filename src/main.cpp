@@ -30,10 +30,9 @@
 int myID = 10;
 int ballNum;
 
-int b_x; int b_y;
+int b_x = 0; int b_y = 0;
 int error_x; int error_y;
-int error_d; int prev_error_d = 0;
-int error_theta; int prev_error_theta = 0;
+int error_d; int error_theta;
 
 // Kd1 = 0.5, Kd2 = 4.0; //Drives and points correctly
 double Kp1 = 0.5;
@@ -162,7 +161,7 @@ void loop() {
   //   Serial.printf("c:%d\tx:%d\ty:%d\n", balzz[i].hue,balzz[i].x,balzz[i].y);
   // } 
 
-  if (pose.valid == true && state == 1){ //Check if pose is valid and there are balls, otherwise no point
+  if (pose.valid == true && state == 1 && numBalzz > 1){ //Check if pose is valid and there are balls, otherwise no point
 
     //Get Nearest Ball position
     int nearestball = getNearestBall(pose, balzz, numBalzz);
