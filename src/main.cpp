@@ -66,7 +66,14 @@ See the switch statements at the end of loop()
 */
 int state = 1; //Default state is drive to ball
 
-void driveToPoint(RobotPose pose, int x, int y){
+void driveToPoint(RobotPose pose, int x, int y, bool rotate_only){
+
+  //Sets to only point the robot
+  int rot = 1;
+  if (rotate_only == true){
+    rot = 0;
+  }
+
   // Coordinates of the desired point
   d_x = x;
   d_y = y;
@@ -89,39 +96,8 @@ void driveToPoint(RobotPose pose, int x, int y){
   }
 
   // Drive towards closest ball position proportional controller, 
-  omega_1 = 0.5*(-Kp1*error_d - Kp2*error_theta);
-  omega_2 = 0.5*(-Kp1*error_d + Kp2*error_theta);
-  // Serial.printf("Omega_1: %d, Omega_2: %d", omega_1, omega_2);
-
-  servo3.writeMicroseconds(omega_1 + 1500);
-  servo4.writeMicroseconds(-omega_2 + 1500);
-}
-
-void orientToPoint(RobotPose pose, int x, int y){
-  // Coordinates of the desired point
-  d_x = x;
-  d_y = y;
-  
-  // Pose of the robot
-  x = pose.x;
-  y = pose.y;
-  theta = pose.theta;
-
-  error_x = d_x - x;
-  error_y = d_y - y;
-  error_d = sqrt((error_x * error_x) + (error_y * error_y));
-  error_theta = ((1000*atan2(error_y, error_x)) - theta) * (180 / (PI*1000));
-
-  if (error_theta < -180){
-    error_theta = error_theta + 360;
-  }
-  else if (error_theta > 180){
-    error_theta = error_theta - 360;
-  }
-
-  // Drive towards closest ball position proportional controller, 
-  omega_1 = 0.5*(-Kp2*error_theta);
-  omega_2 = 0.5*( Kp2*error_theta);
+  omega_1 = 0.5*(-Kp1*error_d*rot - Kp2*error_theta);
+  omega_2 = 0.5*(-Kp1*error_d*rot + Kp2*error_theta);
   // Serial.printf("Omega_1: %d, Omega_2: %d", omega_1, omega_2);
 
   servo3.writeMicroseconds(omega_1 + 1500);
@@ -242,32 +218,34 @@ void loop() {
         state = 2;
       }
       else { // Drive to the closest ball
-        driveToPoint(pose, d_x, d_y);
+        driveToPoint(pose, d_x, d_y, false);
         servo2.write(135); //Open the gate
       }
       break;
 
     // Shoot the ball
     case 2: 
-      //Go to a point infront of the goal (can change to range eventually)
+      //Go to a point infront of the goal 
       servo2.write(135);
-      driveToPoint(pose, 1150, 30);
-      error_x = 1150 - x;
-      error_y = 350 - y;
+      driveToPoint(pose, 1150, 30, false);
+      error_x = 1150 - pose.x;
+      error_y = 350 - pose.y;
       error_d = sqrt((error_x * error_x) + (error_y * error_y));
 
-      //When close to the ball
       /*
         We will need to implement the color sensor here
+        if(error_d < 666 && (color is blue/red)){
+          shoot the ball;
+        }
       */
-      if(error_d < 666){
+      if(error_d < 666){ //When close to the goal
         
         //Sanity check we're pointing towards the goal
-        orientToPoint(pose, 1150, 30);
+        driveToPoint(pose, 1150, 30, true);
         error_x = 1150 - x;
         error_y = 30 - y;
 
-        error_theta = ((1000*atan2(error_y, error_x)) - theta) * (180 / (PI*1000));
+        error_theta = ((1000*atan2(error_y, error_x)) - pose.theta) * (180 / (PI*1000));
         if (error_theta < -180){
           error_theta = error_theta + 360;
         }
@@ -297,21 +275,20 @@ void loop() {
       }
       servo2.write(75); // Close the gate 
       // Orient robot parallel with the goal if close
-      if(error_d < 200){
-        orientToPoint(pose, 10, 50);
+      error_x = 1150 - pose.x;
+      error_y = 350 - pose.y;
+      error_d = sqrt((error_x * error_x) + (error_y * error_y));
+
+      if(error_d < 100){
+        driveToPoint(pose, 10, 50, true);
       }
       // Drive to a point infront of the goal
       else {
-        driveToPoint(pose, 1150, 50);
-        error_x = 1150 - x;
-        error_y = 350 - y;
-        error_d = sqrt((error_x * error_x) + (error_y * error_y));
-
+        driveToPoint(pose, 1150, 50, false);
       }
       break;
   }
 }
-
 
 //Sensor Data
   //printf(" %d IR distance\n ", analogRead(irSensor1Pin));
