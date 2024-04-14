@@ -38,7 +38,7 @@ int error_theta; int prev_error_theta = 0;
 
 // Kd1 = 0.5, Kd2 = 4.0; //Drives and points correctly
 double Kp1 = 0.5;
-double Kp2 = 4.5;
+double Kp2 = 4.0;
 int omega_1; int omega_2;
 
 //IR sensor stuff
@@ -60,7 +60,10 @@ int maxblack[] = {3536,2895,3313};
 int minwhite[] = {3264,2468,2865};
 int color[] = {0,0,0};
 
-//State machine
+/*
+This is the state variable. It changes the state of our robot.
+See the switch statements at the end of loop()
+*/
 int state = 1; //Default state is drive to ball
 
 void driveToPoint(RobotPose pose, int x, int y){
@@ -94,7 +97,7 @@ void driveToPoint(RobotPose pose, int x, int y){
   servo4.writeMicroseconds(-omega_2 + 1500);
 }
 
-void pointToPoint(RobotPose pose, int x, int y){
+void orientToPoint(RobotPose pose, int x, int y){
   // Coordinates of the desired point
   d_x = x;
   d_y = y;
@@ -123,6 +126,22 @@ void pointToPoint(RobotPose pose, int x, int y){
 
   servo3.writeMicroseconds(omega_1 + 1500);
   servo4.writeMicroseconds(-omega_2 + 1500);
+}
+
+int getNearestBall(RobotPose pose, BallPosition balzz[20], int numBalzz){
+  //Calculate the distance to the closest ball position
+  int nearestball = 0;
+  double balldistance = 0;
+  int closest = 0;
+  double closestdistance = 999;
+  for(int i = 0; i < numBalzz; i++) {
+    balldistance = sqrt((x-balzz[i].x)*(x-balzz[i].x) + (y-balzz[i].y)*(y-balzz[i].y));
+    if(balldistance < closestdistance){
+      nearestball = i;
+      closestdistance = balldistance; //I changed this line here -Gabe
+    }
+  }
+  return nearestball;
 }
 
 void setup() {
@@ -166,7 +185,7 @@ void setup() {
 
 void loop() {
   printf("\n State: %d", state);
-
+  int prevState = state;
   //Serial.printf(" theta: %d , dist: %d , roboX: %d , roboY %d , BX: %d , BY %d\n", error_theta, error_d, x, y, d_x, d_y);
 
   //Get robot pose and ball position
@@ -179,57 +198,19 @@ void loop() {
 
   if (pose.valid == true && state == 1){ //Check if pose is valid and there are balls, otherwise no point
 
-    x = pose.x;
-    y = pose.y;
-    theta = pose.theta;
-
-    //Calculate the distance to the closest ball position
-    int nearestball = 0;
-    double balldistance = 0;
-    int closest = 0;
-    double closestdistance = 999;
-    for(int i = 0; i < numBalzz; i++) {
-      balldistance = sqrt((x-balzz[i].x)*(x-balzz[i].x) + (y-balzz[i].y)*(y-balzz[i].y));
-      if(balldistance < closestdistance){
-        nearestball = i;
-        closestdistance = balldistance; //I changed this line here -Gabe
-      }
-    }
+    //Get Nearest Ball position
+    int nearestball = getNearestBall(pose, balzz, numBalzz);
 
     //Coordinates of the closest ball
     d_x = balzz[nearestball].x;
     d_y = balzz[nearestball].y;
     // Serial.printf("\n Ballpos: %d, %d",d_x,d_y);
-
-    error_x = d_x - x;
-    error_y = d_y - y;
-    error_d = sqrt((error_x * error_x) + (error_y * error_y));
-    error_theta = ((1000*atan2(error_y, error_x)) - theta) * (180 / (PI*1000));
-
-    if (error_theta < -180){
-      error_theta = error_theta + 360;
-    }
-    else if (error_theta > 180){
-      error_theta = error_theta - 360;
-    }
-    Kp1 = 0.5; //Driving to ball
-    Kp2 = 4.0; //Rotating/pointing to ball
-
-    //Drive towards closest ball position proportional controller, 
-    omega_1 = 0.5*(-Kp1*error_d - Kp2*error_theta);
-    omega_2 = 0.5*(-Kp1*error_d + Kp2*error_theta);
-    // Serial.printf("Omega_1: %d, Omega_2: %d", omega_1, omega_2);
-
-    /*
-    This is the state variable. It changes the state of our robot.
-    See the switch statements at the end of loop()
-    */
     state = 1;
   }
-  // else if (numBalzz < 1) { 
-  //   Serial.println("No more balls");
-  //   state = 3; //Go defend
-  // }
+  else if (numBalzz < 1) { 
+    Serial.println("No more balls");
+    state = 3; //Go defend
+  }
   else if (pose.valid == false) { 
     Serial.println("Pose not valid");
     state = 0; //Do nothing (Stop)
@@ -241,42 +222,48 @@ void loop() {
     i.e. Change it from 
   */
   
-  switch(state){
-    case 0: // Do nothing (Stop)
+  switch(state) {
+    // Do nothing (Stop)
+    case 0: 
       servo3.writeMicroseconds(1500); //Servos 0 velocity
       servo4.writeMicroseconds(1500);
       delay(1000);
-      state = 2;
       servo2.write(150); //Open the gate
+      state = prevState; //Go back to previous state
       break;
 
-    case 1: // Capture the ball
-      if((error_d <= 200) && (abs(error_theta) < 12)){ //Once we're close and pointed correctly, drive forward and lower the gate
+    // Capture the ball
+    case 1: 
+      //Once we're close and pointed correctly, drive forward and lower the gate
+      if((error_d <= 200) && (abs(error_theta) < 12)){ 
         servo3.writeMicroseconds(1425);
         servo4.writeMicroseconds(1575);
         servo2.write(75); //Lower the gate
         state = 2;
       }
       else { // Drive to the closest ball
-        servo3.writeMicroseconds(omega_1 + 1500);
-        servo4.writeMicroseconds(-omega_2 + 1500);
+        driveToPoint(pose, d_x, d_y);
         servo2.write(135); //Open the gate
       }
       break;
 
-    case 2: // Shoot the ball
-      /*
-        Not implemented, same as stop for now
-      */
+    // Shoot the ball
+    case 2: 
+      //Go to a point infront of the goal (can change to range eventually)
       servo2.write(135);
-      driveToPoint(pose, 1150, 350);
+      driveToPoint(pose, 1150, 30);
       error_x = 1150 - x;
       error_y = 350 - y;
       error_d = sqrt((error_x * error_x) + (error_y * error_y));
 
-      if(error_d < 300){
-
-        pointToPoint(pose, 1150, 30);
+      //When close to the ball
+      /*
+        We will need to implement the color sensor here
+      */
+      if(error_d < 666){
+        
+        //Sanity check we're pointing towards the goal
+        orientToPoint(pose, 1150, 30);
         error_x = 1150 - x;
         error_y = 30 - y;
 
@@ -290,30 +277,37 @@ void loop() {
         
         if(error_theta > 12){
           servo2.write(135); //Open the gate
-          servo3.writeMicroseconds(1300);
+          servo3.writeMicroseconds(1300); //Go forward
           servo4.writeMicroseconds(1700);
           delay(1000);
-          servo3.writeMicroseconds(1300);
-          servo4.writeMicroseconds(1700);
+          servo3.writeMicroseconds(1700); //Go backwards
+          servo4.writeMicroseconds(1300);
           delay(1000);
-          state = 3;
+          state = 1;
         }
       }
       break;
 
-    case 3: // Defend
-      /*
-        Not implemented, same as stop for now
+    // Defend
+    case 3: 
+      //Check if balls available, switch to shooting state
+      if(ballNum > 0){ 
+        state = 1;
+        break;
+      }
+      servo2.write(75); // Close the gate 
+      // Orient robot parallel with the goal if close
+      if(error_d < 200){
+        orientToPoint(pose, 10, 50);
+      }
+      // Drive to a point infront of the goal
+      else {
+        driveToPoint(pose, 1150, 50);
+        error_x = 1150 - x;
+        error_y = 350 - y;
+        error_d = sqrt((error_x * error_x) + (error_y * error_y));
 
-        Should be: 
-        Go to a point in front of the goal
-
-        driveToPoint(pose, x, y);
-        }
-      */
-      servo3.writeMicroseconds(1500); //Servos 0 velocity
-      servo4.writeMicroseconds(1500);
-      // servo2.write(130); //Open the gate
+      }
       break;
   }
 }
