@@ -28,10 +28,9 @@
 
 //Communications and positional
 int myID = 10;
-int x; int y; int theta;
 int ballNum;
 
-int d_x; int d_y;
+int b_x; int b_y;
 int error_x; int error_y;
 int error_d; int prev_error_d = 0;
 int error_theta; int prev_error_theta = 0;
@@ -66,7 +65,7 @@ See the switch statements at the end of loop()
 */
 int state = 1; //Default state is drive to ball
 
-void driveToPoint(RobotPose pose, int x, int y, bool rotate_only){
+void driveToPoint(RobotPose pose, int d_x, int d_y, bool rotate_only){
 
   //Sets to only point the robot
   int rot = 1;
@@ -74,19 +73,10 @@ void driveToPoint(RobotPose pose, int x, int y, bool rotate_only){
     rot = 0;
   }
 
-  // Coordinates of the desired point
-  d_x = x;
-  d_y = y;
-  
-  // Pose of the robot
-  x = pose.x;
-  y = pose.y;
-  theta = pose.theta;
-
-  error_x = d_x - x;
-  error_y = d_y - y;
-  error_d = sqrt((error_x * error_x) + (error_y * error_y));
-  error_theta = ((1000*atan2(error_y, error_x)) - theta) * (180 / (PI*1000));
+  int error_x = d_x - pose.x;
+  int error_y = d_y - pose.y;
+  int error_d = sqrt((error_x * error_x) + (error_y * error_y));
+  int error_theta = ((1000*atan2(error_y, error_x)) - pose.theta) * (180 / (PI*1000));
 
   if (error_theta < -180){
     error_theta = error_theta + 360;
@@ -99,6 +89,7 @@ void driveToPoint(RobotPose pose, int x, int y, bool rotate_only){
   omega_1 = 0.5*(-Kp1*error_d*rot - Kp2*error_theta);
   omega_2 = 0.5*(-Kp1*error_d*rot + Kp2*error_theta);
   // Serial.printf("Omega_1: %d, Omega_2: %d", omega_1, omega_2);
+  //Serial.printf(" theta: %d , dist: %d , roboX: %d , roboY %d , BX: %d , BY %d\n", error_theta, error_d, x, y, d_x, d_y);
 
   servo3.writeMicroseconds(omega_1 + 1500);
   servo4.writeMicroseconds(-omega_2 + 1500);
@@ -111,7 +102,7 @@ int getNearestBall(RobotPose pose, BallPosition balzz[20], int numBalzz){
   int closest = 0;
   double closestdistance = 999;
   for(int i = 0; i < numBalzz; i++) {
-    balldistance = sqrt((x-balzz[i].x)*(x-balzz[i].x) + (y-balzz[i].y)*(y-balzz[i].y));
+    balldistance = sqrt((pose.x-balzz[i].x)*(pose.x-balzz[i].x) + (pose.y-balzz[i].y)*(pose.y-balzz[i].y));
     if(balldistance < closestdistance){
       nearestball = i;
       closestdistance = balldistance; //I changed this line here -Gabe
@@ -162,7 +153,6 @@ void setup() {
 void loop() {
   printf("\n State: %d", state);
   int prevState = state;
-  //Serial.printf(" theta: %d , dist: %d , roboX: %d , roboY %d , BX: %d , BY %d\n", error_theta, error_d, x, y, d_x, d_y);
 
   //Get robot pose and ball position
   RobotPose pose = getRobotPose(myID);
@@ -178,8 +168,8 @@ void loop() {
     int nearestball = getNearestBall(pose, balzz, numBalzz);
 
     //Coordinates of the closest ball
-    d_x = balzz[nearestball].x;
-    d_y = balzz[nearestball].y;
+    b_x = balzz[nearestball].x;
+    b_y = balzz[nearestball].y;
     // Serial.printf("\n Ballpos: %d, %d",d_x,d_y);
     state = 1;
   }
@@ -218,7 +208,7 @@ void loop() {
         state = 2;
       }
       else { // Drive to the closest ball
-        driveToPoint(pose, d_x, d_y, false);
+        driveToPoint(pose, b_x, b_y, false);
         servo2.write(135); //Open the gate
       }
       break;
@@ -242,8 +232,8 @@ void loop() {
         
         //Sanity check we're pointing towards the goal
         driveToPoint(pose, 1150, 30, true);
-        error_x = 1150 - x;
-        error_y = 30 - y;
+        error_x = 1150 - pose.x;
+        error_y = 30 - pose.y;
 
         error_theta = ((1000*atan2(error_y, error_x)) - pose.theta) * (180 / (PI*1000));
         if (error_theta < -180){
