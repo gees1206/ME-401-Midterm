@@ -54,6 +54,22 @@ See the switch statements at the end of loop()
 */
 int state = 1; //Default state is drive to ball
 
+int getErrorD(RobotPose pose, int error_x, int error_y){
+  int distance = sqrt((error_x * error_x) + (error_y * error_y));
+  return distance;
+}
+
+int getErrorTheta(RobotPose pose, int error_x, int error_y){
+  int theta = ((1000*atan2(error_y, error_x)) - pose.theta) * (180 / (PI*1000));
+
+  if (theta < -180){
+    theta = theta + 360;
+  }
+  else if (theta > 180){
+    theta = theta - 360;
+  }
+  return theta;
+}
 
 void driveToPoint(RobotPose pose, int d_x, int d_y, bool rotate_only){
 
@@ -94,22 +110,6 @@ int getNearestBall(RobotPose pose, BallPosition balzz[20], int numBalzz){
   return nearestball;
 }
 
-int getErrorD(RobotPose pose, int error_x, int error_y){
-  int distance = sqrt((error_x * error_x) + (error_y * error_y));
-  return distance;
-}
-
-int getErrorTheta(RobotPose pose, int error_x, int error_y){
-  int theta = ((1000*atan2(error_y, error_x)) - pose.theta) * (180 / (PI*1000));
-
-  if (theta < -180){
-    theta = theta + 360;
-  }
-  else if (theta > 180){
-    theta = theta - 360;
-  }
-  return theta;
-}
 
 void setup() {
   Serial.begin(115200);
@@ -220,24 +220,23 @@ void loop() {
     case 2: 
       Serial.println("Shooting the ball");
       //Go to a point infront of the goal 
-      servo2.write(servoUP);
+      servo2.write(servoDW);
       driveToPoint(pose, 1150, 300, false);
       error_x = 1150 - pose.x;
       error_y = 300 - pose.y;
       error_d = getErrorD(pose, error_x, error_y);
       error_theta = getErrorTheta(pose, error_x, error_y);
 
-      /*
-        We will need to implement the color sensor here
-        if(error_d < 666 && (color is blue/red)){
-          shoot the ball;
-        }
-      */
-      if(error_d < 50){ //When close to the goal
+      // We will need to implement the color sensor here
+      // if(error_d < 666 && (color is blue/red)){
+      //   shoot the ball;}
+      if(error_d < 150){ //When close to the goal
         
         //Point at the goal
         driveToPoint(pose, 1150, 10, true);
-        
+
+        error_y = 10 - pose.y;
+        error_theta = getErrorTheta(pose, error_x, error_y);
         if(abs(error_theta) < 5){ //When Pointed correctly
           servo2.write(servoUP); //Open the gate
           servo3.writeMicroseconds(1300); //Go forward
@@ -264,16 +263,16 @@ void loop() {
       servo2.write(servoDW); // Close the gate 
       
       error_x = 1150 - pose.x;
-      error_y = 350 - pose.y;
+      error_y = 300 - pose.y;
       error_d = getErrorD(pose, error_x, error_y);
 
       // Orient robot parallel with the goal if close
       if(error_d < 50){
-        driveToPoint(pose, 10, 350, true);
+        driveToPoint(pose, 10, 300, true);
       }
       // Drive to a point infront of the goal
       else {
-        driveToPoint(pose, 1150, 350, false);
+        driveToPoint(pose, 1150, 300, false);
       }
       break;
   }
