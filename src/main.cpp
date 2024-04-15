@@ -7,25 +7,6 @@
 #include "communications.h"
 #include "stdint.h"
 
-
-//TODO
-//Calibrate the Color sensor
-//Finish PID tuning the IR sensor
-//Calibrate the IR sensor
-//Write up the servo nonsense
-//Figure out the web shit processing
-//Path planning, and subroutines for attacking, defending, and shooting?
-
-// We want to avoid obstacles as we go along
-// Interrupts for switches, Interrupt for ir-sensor
-
-
-//tU = .111 seconds
-//ku = 45
-//kp = 27
-//ki = 320
-//kd = 5
-
 //Communications and positional
 int myID = 10;
 int ballNum;
@@ -58,14 +39,21 @@ int maxblack[] = {3536,2895,3313};
 int minwhite[] = {3264,2468,2865};
 int color[] = {0,0,0};
 
+//Servo and driving
 int servoUP = 135;
 int servoDW = 77;
+
+//Consists of point (x,y) infront of goal for shooting/defending
+//+Color of goal to shoot (1 for red, 2 for blue)
+int team_blue [3] = {1150, 2500,1}; //???
+int team_red [3] = {1150, 30,2};
 
 /*
 This is the state variable. It changes the state of our robot.
 See the switch statements at the end of loop()
 */
 int state = 1; //Default state is drive to ball
+
 
 void driveToPoint(RobotPose pose, int d_x, int d_y, bool rotate_only){
 
@@ -77,15 +65,8 @@ void driveToPoint(RobotPose pose, int d_x, int d_y, bool rotate_only){
 
   int error_x = d_x - pose.x;
   int error_y = d_y - pose.y;
-  int error_d = sqrt((error_x * error_x) + (error_y * error_y));
-  int error_theta = ((1000*atan2(error_y, error_x)) - pose.theta) * (180 / (PI*1000));
-
-  if (error_theta < -180){
-    error_theta = error_theta + 360;
-  }
-  else if (error_theta > 180){
-    error_theta = error_theta - 360;
-  }
+  int error_d = getErrorD(pose, error_x, error_y);
+  int error_theta = getErrorTheta(pose, error_x, error_y);
 
   // Drive towards closest ball position proportional controller, 
   omega_1 = 0.5*(-Kp1*error_d*rot - Kp2*error_theta);
@@ -113,15 +94,28 @@ int getNearestBall(RobotPose pose, BallPosition balzz[20], int numBalzz){
   return nearestball;
 }
 
+int getErrorD(RobotPose pose, int error_x, int error_y){
+  int distance = sqrt((error_x * error_x) + (error_y * error_y));
+  return distance;
+}
+
+int getErrorTheta(RobotPose pose, int error_x, int error_y){
+  int theta = ((1000*atan2(error_y, error_x)) - pose.theta) * (180 / (PI*1000));
+
+  if (theta < -180){
+    theta = theta + 360;
+  }
+  else if (theta > 180){
+    theta = theta - 360;
+  }
+  return theta;
+}
+
 void setup() {
-  
   Serial.begin(115200);
 
-  /*
-    //Comment out when testing outside the 401 room
-  */
+  //Comment out when testing outside the 401 room
   setupCommunications();
-
 
   //Limit switches
   pinMode(limit1, INPUT);
@@ -143,13 +137,12 @@ void setup() {
   servo1.attach(SERVO1_PIN, 500, 2400);
   servo2.attach(SERVO2_PIN, 500, 2400);   //Servo 2 is shooter
   //servo1.writeMicroseconds(1700);
-  servo2.write(115);
+  servo2.write(servoUP);
 
   servo3.attach(SERVO3_PIN, 1300, 1700);  //rigt
   servo4.attach(SERVO4_PIN, 1300, 1700);  //ligt
   servo3.writeMicroseconds(1500); //Servos 0 velocity
   servo4.writeMicroseconds(1500);
-  
 }
 
 void loop() {
@@ -174,8 +167,6 @@ void loop() {
 
     int error_x = b_x - pose.x;
     int error_y = b_y - pose.y;
-    error_d = sqrt((error_x * error_x) + (error_y * error_y));
-    error_theta = ((1000*atan2(error_y, error_x)) - pose.theta) * (180 / (PI*1000));
     // Serial.printf("\n Ballpos: %d, %d",d_x,d_y);
     state = 1;
   }
@@ -188,7 +179,6 @@ void loop() {
     state = 3; //Go defend
   }
   
-
   /*
     This is the main state machine. It determines which state the robot is in.
     We need to keep track of variable called 'state'!!! and change it when appropriate.
@@ -196,6 +186,7 @@ void loop() {
   */
   
   switch(state) {
+    // DO NOT CALL CASE 0 DIRECTLY!!!! (It will stop the robot permanently)
     // Do nothing (Stop)
     case 0: 
       servo3.writeMicroseconds(1500); //Servos 0 velocity
@@ -206,7 +197,11 @@ void loop() {
     // Capture the ball
     case 1: 
       //Once we're close and pointed correctly, drive forward and lower the gate
-      
+      error_x = b_x - pose.x;
+      error_y = b_y - pose.y;
+      error_d = getErrorD(pose, error_x, error_y);
+      error_theta = getErrorTheta(pose, error_x, error_y);
+
       if((error_d <= 205) && (abs(error_theta) < 12)){ 
         Serial.println("Capturing the ball");
         servo3.writeMicroseconds(1425);
@@ -217,7 +212,7 @@ void loop() {
       else { // Drive to the closest ball
         Serial.println("Driving to ball");
         driveToPoint(pose, b_x, b_y, false);
-        servo2.write(135); //Open the gate
+        servo2.write(servoUP); //Open the gate
       }
       break;
 
@@ -225,11 +220,12 @@ void loop() {
     case 2: 
       Serial.println("Shooting the ball");
       //Go to a point infront of the goal 
-      servo2.write(135);
-      driveToPoint(pose, 1150, 30, false);
+      servo2.write(servoUP);
+      driveToPoint(pose, 1150, 300, false);
       error_x = 1150 - pose.x;
-      error_y = 350 - pose.y;
-      error_d = sqrt((error_x * error_x) + (error_y * error_y));
+      error_y = 300 - pose.y;
+      error_d = getErrorD(pose, error_x, error_y);
+      error_theta = getErrorTheta(pose, error_x, error_y);
 
       /*
         We will need to implement the color sensor here
@@ -237,29 +233,22 @@ void loop() {
           shoot the ball;
         }
       */
-      if(error_d < 666){ //When close to the goal
+      if(error_d < 50){ //When close to the goal
         
-        //Sanity check we're pointing towards the goal
-        driveToPoint(pose, 1150, 300, true);
-        error_x = 1150 - pose.x;
-        error_y = 300 - pose.y;
-
-        error_theta = ((1000*atan2(error_y, error_x)) - pose.theta) * (180 / (PI*1000));
-        if (error_theta < -180){
-          error_theta = error_theta + 360;
-        }
-        else if (error_theta > 180){
-          error_theta = error_theta - 360;
-        }
+        //Point at the goal
+        driveToPoint(pose, 1150, 10, true);
         
-        if(abs(error_theta) < 12){ //When Pointed correctly
-          servo2.write(135); //Open the gate
+        if(abs(error_theta) < 5){ //When Pointed correctly
+          servo2.write(servoUP); //Open the gate
           servo3.writeMicroseconds(1300); //Go forward
           servo4.writeMicroseconds(1700);
           delay(1000);
           servo3.writeMicroseconds(1700); //Go backwards
           servo4.writeMicroseconds(1300);
           delay(1000);
+          servo3.writeMicroseconds(1500); //Stop for a sec
+          servo4.writeMicroseconds(1500);
+          delay(1500);
           state = 1;
         }
       }
@@ -276,27 +265,44 @@ void loop() {
       
       error_x = 1150 - pose.x;
       error_y = 350 - pose.y;
-      error_d = sqrt((error_x * error_x) + (error_y * error_y));
+      error_d = getErrorD(pose, error_x, error_y);
 
       // Orient robot parallel with the goal if close
-      if(error_d < 100){
-        driveToPoint(pose, 10, 50, true);
+      if(error_d < 50){
+        driveToPoint(pose, 10, 350, true);
       }
       // Drive to a point infront of the goal
       else {
-        driveToPoint(pose, 1150, 50, false);
+        driveToPoint(pose, 1150, 350, false);
       }
       break;
   }
 }
 
+//TODO
+//Calibrate the Color sensor
+//Finish PID tuning the IR sensor
+//Calibrate the IR sensor
+//Write up the servo nonsense
+//Figure out the web shit processing
+//Path planning, and subroutines for attacking, defending, and shooting?
+
+// We want to avoid obstacles as we go along
+// Interrupts for switches, Interrupt for ir-sensor
+
+//tU = .111 seconds
+//ku = 45
+//kp = 27
+//ki = 320
+//kd = 5
+
 //Sensor Data
-  //printf(" %d IR distance\n ", analogRead(irSensor1Pin));
-  //printf("%d color\n", analogRead(sensorPin));
+//printf(" %d IR distance\n ", analogRead(irSensor1Pin));
+//printf("%d color\n", analogRead(sensorPin));
 
-  // Serial.printf("Left Switch: %d\n", analogRead(36));
-  // Serial.printf("Right Switch: %d\n", analogRead(39));
+// Serial.printf("Left Switch: %d\n", analogRead(36));
+// Serial.printf("Right Switch: %d\n", analogRead(39));
 
-  // DC motors
-  // D_print("SETPOINT:"); D_print(getSetpoint1()); D_print("   POS:"); D_print(getPosition1()); D_print("    ERR:"); D_print(getError1());
-  // D_print("    OUTPUT:"); D_println(getOutput1());
+// DC motors
+// D_print("SETPOINT:"); D_print(getSetpoint1()); D_print("   POS:"); D_print(getPosition1()); D_print("    ERR:"); D_print(getError1());
+// D_print("    OUTPUT:"); D_println(getOutput1());
