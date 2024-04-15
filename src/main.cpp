@@ -58,6 +58,9 @@ int maxblack[] = {3536,2895,3313};
 int minwhite[] = {3264,2468,2865};
 int color[] = {0,0,0};
 
+int servoUP = 135;
+int servoDW = 77;
+
 /*
 This is the state variable. It changes the state of our robot.
 See the switch statements at the end of loop()
@@ -150,7 +153,6 @@ void setup() {
 }
 
 void loop() {
-  printf("\n State: %d", state);
   int prevState = state;
 
   //Get robot pose and ball position
@@ -161,25 +163,31 @@ void loop() {
   //   Serial.printf("c:%d\tx:%d\ty:%d\n", balzz[i].hue,balzz[i].x,balzz[i].y);
   // } 
 
-  if (pose.valid == true && state == 1 && numBalzz > 1){ //Check if pose is valid and there are balls, otherwise no point
-
+  if (pose.valid == true && state != 2 && numBalzz >= 1){ //Check if pose is valid and there are balls, otherwise no point
+    
     //Get Nearest Ball position
     int nearestball = getNearestBall(pose, balzz, numBalzz);
 
     //Coordinates of the closest ball
     b_x = balzz[nearestball].x;
     b_y = balzz[nearestball].y;
+
+    int error_x = b_x - pose.x;
+    int error_y = b_y - pose.y;
+    error_d = sqrt((error_x * error_x) + (error_y * error_y));
+    error_theta = ((1000*atan2(error_y, error_x)) - pose.theta) * (180 / (PI*1000));
     // Serial.printf("\n Ballpos: %d, %d",d_x,d_y);
     state = 1;
-  }
-  else if (numBalzz < 1) { 
-    Serial.println("No more balls");
-    state = 3; //Go defend
   }
   else if (pose.valid == false) { 
     Serial.println("Pose not valid");
     state = 0; //Do nothing (Stop)
   }
+  else if (numBalzz < 1 && state != 2) { 
+    Serial.println("No more balls");
+    state = 3; //Go defend
+  }
+  
 
   /*
     This is the main state machine. It determines which state the robot is in.
@@ -192,21 +200,22 @@ void loop() {
     case 0: 
       servo3.writeMicroseconds(1500); //Servos 0 velocity
       servo4.writeMicroseconds(1500);
-      delay(1000);
-      servo2.write(150); //Open the gate
       state = prevState; //Go back to previous state
       break;
 
     // Capture the ball
     case 1: 
       //Once we're close and pointed correctly, drive forward and lower the gate
-      if((error_d <= 200) && (abs(error_theta) < 12)){ 
+      
+      if((error_d <= 205) && (abs(error_theta) < 12)){ 
+        Serial.println("Capturing the ball");
         servo3.writeMicroseconds(1425);
         servo4.writeMicroseconds(1575);
-        servo2.write(75); //Lower the gate
+        servo2.write(servoDW); //Lower the gate
         state = 2;
       }
       else { // Drive to the closest ball
+        Serial.println("Driving to ball");
         driveToPoint(pose, b_x, b_y, false);
         servo2.write(135); //Open the gate
       }
@@ -214,6 +223,7 @@ void loop() {
 
     // Shoot the ball
     case 2: 
+      Serial.println("Shooting the ball");
       //Go to a point infront of the goal 
       servo2.write(135);
       driveToPoint(pose, 1150, 30, false);
@@ -230,9 +240,9 @@ void loop() {
       if(error_d < 666){ //When close to the goal
         
         //Sanity check we're pointing towards the goal
-        driveToPoint(pose, 1150, 30, true);
+        driveToPoint(pose, 1150, 300, true);
         error_x = 1150 - pose.x;
-        error_y = 30 - pose.y;
+        error_y = 300 - pose.y;
 
         error_theta = ((1000*atan2(error_y, error_x)) - pose.theta) * (180 / (PI*1000));
         if (error_theta < -180){
@@ -242,7 +252,7 @@ void loop() {
           error_theta = error_theta - 360;
         }
         
-        if(error_theta > 12){
+        if(abs(error_theta) < 12){ //When Pointed correctly
           servo2.write(135); //Open the gate
           servo3.writeMicroseconds(1300); //Go forward
           servo4.writeMicroseconds(1700);
@@ -262,12 +272,13 @@ void loop() {
         state = 1;
         break;
       }
-      servo2.write(75); // Close the gate 
-      // Orient robot parallel with the goal if close
+      servo2.write(servoDW); // Close the gate 
+      
       error_x = 1150 - pose.x;
       error_y = 350 - pose.y;
       error_d = sqrt((error_x * error_x) + (error_y * error_y));
 
+      // Orient robot parallel with the goal if close
       if(error_d < 100){
         driveToPoint(pose, 10, 50, true);
       }
