@@ -17,7 +17,7 @@ int error_d; int error_theta;
 
 // Kd1 = 0.5, Kd2 = 4.0; //Drives and points correctly
 double Kp1 = 0.5;
-double Kp2 = 4.0;
+double Kp2 = 4.5;
 int omega_1; int omega_2;
 
 //IR sensor stuff
@@ -43,10 +43,11 @@ int color[] = {0,0,0};
 int servoUP = 135;
 int servoDW = 77;
 
-//Consists of point (x,y) infront of goal for shooting/defending
+//Consists of point (x,y) infront of goal for shooting/defending, goal y pos
 //+Color of goal to shoot (1 for red, 2 for blue)
-int team_blue [3] = {1150, 2500,1}; //???
-int team_red [3] = {1150, 30,2};
+
+// int team [4] = {2150, 2400, 300, 1}; //Team blue 
+int team [4] = {300, 10, 2150, 2}; //Team red
 
 /*
 This is the state variable. It changes the state of our robot.
@@ -75,7 +76,7 @@ void driveToPoint(RobotPose pose, int d_x, int d_y, bool rotate_only){
 
   //Sets to only point the robot
   int rot = 1;
-  if (rotate_only == true){
+  if (rotate_only == true) {
     rot = 0;
   }
 
@@ -109,7 +110,6 @@ int getNearestBall(RobotPose pose, BallPosition balzz[20], int numBalzz){
   }
   return nearestball;
 }
-
 
 void setup() {
   Serial.begin(115200);
@@ -156,8 +156,8 @@ void loop() {
   //   Serial.printf("c:%d\tx:%d\ty:%d\n", balzz[i].hue,balzz[i].x,balzz[i].y);
   // } 
 
-  if (pose.valid == true && state != 2 && numBalzz >= 1){ //Check if pose is valid and there are balls, otherwise no point
-    
+  if (pose.valid == true && state != 2 && numBalzz > 0){ //Check if pose is valid and there are balls, otherwise no point 
+  
     //Get Nearest Ball position
     int nearestball = getNearestBall(pose, balzz, numBalzz);
 
@@ -202,7 +202,7 @@ void loop() {
       error_d = getErrorD(pose, error_x, error_y);
       error_theta = getErrorTheta(pose, error_x, error_y);
 
-      if((error_d <= 205) && (abs(error_theta) < 12)){ 
+      if((error_d <= 205) && (abs(error_theta) < 12)) { 
         Serial.println("Capturing the ball");
         servo3.writeMicroseconds(1425);
         servo4.writeMicroseconds(1575);
@@ -220,10 +220,10 @@ void loop() {
     case 2: 
       Serial.println("Shooting the ball");
       //Go to a point infront of the goal 
-      servo2.write(servoDW);
-      driveToPoint(pose, 1150, 300, false);
+      servo2.write(servoDW); 
+      driveToPoint(pose, team[0], team[1], false);
       error_x = 1150 - pose.x;
-      error_y = 300 - pose.y;
+      error_y = team[0] - pose.y;
       error_d = getErrorD(pose, error_x, error_y);
       error_theta = getErrorTheta(pose, error_x, error_y);
 
@@ -233,9 +233,9 @@ void loop() {
       if(error_d < 150){ //When close to the goal
         
         //Point at the goal
-        driveToPoint(pose, 1150, 10, true);
+        driveToPoint(pose, team[0], team[2], true);
 
-        error_y = 10 - pose.y;
+        error_y = team[1] - pose.y;
         error_theta = getErrorTheta(pose, error_x, error_y);
         if(abs(error_theta) < 5){ //When Pointed correctly
           servo2.write(servoUP); //Open the gate
@@ -262,17 +262,17 @@ void loop() {
       }
       servo2.write(servoDW); // Close the gate 
       
-      error_x = 1150 - pose.x;
-      error_y = 300 - pose.y;
+      error_x = team[0] - pose.x;
+      error_y = team[2] - pose.y;
       error_d = getErrorD(pose, error_x, error_y);
 
       // Orient robot parallel with the goal if close
       if(error_d < 50){
-        driveToPoint(pose, 10, 300, true);
+        driveToPoint(pose, 10, team[2], true);
       }
       // Drive to a point infront of the goal
       else {
-        driveToPoint(pose, 1150, 300, false);
+        driveToPoint(pose, 1150, team[2], false);
       }
       break;
   }
