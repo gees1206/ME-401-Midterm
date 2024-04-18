@@ -29,12 +29,12 @@ int limit1 = 36; // left
 int limit2 = 39; // right
 
 /* LED and sensor pin setup */
-int sensorPin = 34;
+int sensorPin = 32;
 int bluePin = 23;
 int greenPin = 22;
 int redPin = 19;
-int maxblack[] = {3536,2895,3313};
-int minwhite[] = {3264,2468,2865};
+int maxblack[] = {2336,2382,2480};
+int minwhite[] = {871,844,855};
 int color[] = {0,0,0};
 
 /* Servo and driving */
@@ -233,7 +233,61 @@ void loop() {
         error_theta = getErrorTheta(pose, error_x, error_y);
         driveToPoint(pose, 1250, team[1], true); //Point towards the goal
 
-        if(abs(error_theta) < 5) { 
+        if(abs(error_theta) < 5) {
+          //Austin here, adding the color stuff. Wanting to try to find the color 3 times then shoot anyways if it isn't right.
+          for(int i; i < 3; i++){
+            //Flashing through all 3 colors and reading photoresistor values.
+            digitalWrite(redPin,HIGH);
+            delay(10); // wait for the photresistor value to settle
+            color[0] = analogRead(sensorPin); // read the photoresistor value
+            digitalWrite(redPin,LOW);
+
+            digitalWrite(greenPin,HIGH);
+            delay(10); // wait for the photresistor value to settle
+            color[1] = analogRead(sensorPin); // read the photoresistor value
+            digitalWrite(greenPin,LOW);
+            
+            digitalWrite(bluePin,HIGH);
+            delay(10); // wait for the photresistor value to settle
+            color[2] = analogRead(sensorPin); // read the photoresistor value
+            digitalWrite(bluePin,LOW);
+
+            //Assuming we're on blue paper, red team
+            if(color[0] > 1500 && color[1] < 1300 && team[3] == 2){
+              servo2.write(servoUP); 
+              servo3.writeMicroseconds(1300); //Go forward
+              servo4.writeMicroseconds(1700);
+              delay(1000);
+              servo3.writeMicroseconds(1700); //Go backwards
+              servo4.writeMicroseconds(1300);
+              delay(1000);
+              servo3.writeMicroseconds(1600); //Turn back 
+              servo4.writeMicroseconds(1600);
+              delay(1500);
+              state = 1;
+              break;
+            }
+            //and if we're on red paper, blue team
+            if(color[0] < 1100 && color[1] > 1600 && team[3] == 1){
+              servo2.write(servoUP); 
+              servo3.writeMicroseconds(1300); //Go forward
+              servo4.writeMicroseconds(1700);
+              delay(1000);
+              servo3.writeMicroseconds(1700); //Go backwards
+              servo4.writeMicroseconds(1300);
+              delay(1000);
+              servo3.writeMicroseconds(1600); //Turn back 
+              servo4.writeMicroseconds(1600);
+              delay(1500);
+              state = 1;
+              break;
+            }
+            //Need to clear color afterwards
+            color[0] = 0;
+            color[1] = 0;
+            color[2] = 0;
+          } 
+          
           servo2.write(servoUP); 
           servo3.writeMicroseconds(1300); //Go forward
           servo4.writeMicroseconds(1700);
@@ -245,6 +299,7 @@ void loop() {
           servo4.writeMicroseconds(1600);
           delay(1500);
           state = 1;
+          
         }
       }
       else {
