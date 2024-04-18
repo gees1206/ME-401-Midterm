@@ -41,8 +41,8 @@ int color[] = {0,0,0};
 int servoUP = 135; int servoDW = 85;
 
 /* Shooting y-pos, oponent goal y-pose, own defensive y-pos, Color (1 red, 2 blue) */
-int team [4] = {2100, 2350, 300, 1}; //Team blue 
-//int team [4] = {300, 10, 2100, 2}; //Team red
+//int team [4] = {2100, 2350, 300, 1}; //Team blue 
+int team [4] = {300, 10, 2100, 2}; //Team red
 int midfield_x = 1225;
 
 int state = 1; //Default state is drive to ball
@@ -166,7 +166,7 @@ void loop() {
     int error_y = b_y - pose.y;
     // Serial.printf("\n Ballpos: %d, %d", b_x, b_y);
 
-    state = 1; // Shooting
+    state = 2; // Shooting
   }
 
   else if (pose.valid == false) { 
@@ -309,7 +309,7 @@ void loop() {
         }
       }
       else {
-        driveToPoint(pose, 1250, team[0], false);
+        driveToPoint(pose, midfield_x, team[0], false);
       }
       break;
 
