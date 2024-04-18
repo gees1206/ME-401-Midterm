@@ -166,7 +166,7 @@ void loop() {
     int error_y = b_y - pose.y;
     // Serial.printf("\n Ballpos: %d, %d", b_x, b_y);
 
-    state = 0; // Shooting
+    state = 1; // Shooting
   }
 
   else if (pose.valid == false) { 
@@ -243,7 +243,7 @@ void loop() {
 
         if(abs(error_theta) < 5) {
           //Austin here, adding the color stuff. Wanting to try to find the color 3 times then shoot anyways if it isn't right.
-          for(int i; i < 3; i++){
+          for(int i = 0; i < 3; i++) {
             //Flashing through all 3 colors and reading photoresistor values.
             digitalWrite(redPin,HIGH);
             delay(10); // wait for the photresistor value to settle
@@ -261,7 +261,7 @@ void loop() {
             digitalWrite(bluePin,LOW);
 
             //Assuming we're on blue paper, red team
-            if(color[0] > 1500 && color[1] < 1300 && team[3] == 2){
+            if(color[0] > 1500 && color[1] < 1300 && team[3] == 2) {
               servo2.write(servoUP); 
               servo3.writeMicroseconds(1300); //Go forward
               servo4.writeMicroseconds(1700);
@@ -295,7 +295,6 @@ void loop() {
             color[1] = 0;
             color[2] = 0;
           } 
-          
           servo2.write(servoUP); 
           servo3.writeMicroseconds(1300); //Go forward
           servo4.writeMicroseconds(1700);
@@ -307,7 +306,6 @@ void loop() {
           servo4.writeMicroseconds(1600);
           delay(1500);
           state = 1;
-          
         }
       }
       else {
