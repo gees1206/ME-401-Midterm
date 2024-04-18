@@ -38,11 +38,11 @@ int minwhite[] = {3264,2468,2865};
 int color[] = {0,0,0};
 
 /* Servo and driving */
-int servoUP = 135; int servoDW = 77;
+int servoUP = 135; int servoDW = 85;
 
 /* Shooting y-pos, oponent goal y-pose, own defensive y-pos, Color (1 red, 2 blue) */
-int team [4] = {2150, 2400, 300, 1}; //Team blue 
-// int team [4] = {300, 10, 2150, 2}; //Team red
+int team [4] = {1900, 2400, 300, 1}; //Team blue 
+//int team [4] = {300, 10, 1900, 2}; //Team red
 
 int state = 1; //Default state is drive to ball
 
@@ -165,7 +165,7 @@ void loop() {
     int error_y = b_y - pose.y;
     // Serial.printf("\n Ballpos: %d, %d", b_x, b_y);
 
-    state = 1; // Shooting
+    state = 2; // Shooting
   }
 
   else if (pose.valid == false) { 
@@ -199,7 +199,7 @@ void loop() {
       error_d = getErrorD(pose, error_x, error_y);
       error_theta = getErrorTheta(pose, error_x, error_y);
 
-      if((error_d <= 205) && (abs(error_theta) < 12)) { 
+      if((error_d <= 210) && (abs(error_theta) < 10)) { 
         Serial.println("Capturing the ball");
         servo3.writeMicroseconds(1425); //Go forward
         servo4.writeMicroseconds(1575);
@@ -208,7 +208,7 @@ void loop() {
       }
 
       else { 
-        Serial.println("Driving to ball");
+        Serial.printf("\nDriving to ball (%d,%d)",b_x,b_y);
         driveToPoint(pose, b_x, b_y, false);
         servo2.write(servoUP); 
       }
@@ -219,19 +219,19 @@ void loop() {
       Serial.println("Shooting the ball");
 
       servo2.write(servoDW); 
-      driveToPoint(pose, 1200, team[0], false);
-      error_x = 1200 - pose.x;
+      error_x = 1250 - pose.x;
       error_y = team[0] - pose.y;
       error_d = getErrorD(pose, error_x, error_y);
 
       // We will need to implement the color sensor here
       // if(error_d < 666 && (color is blue/red)){
       //   shoot the ball;}
-      if(error_d < 150) { 
-        driveToPoint(pose, 1200, team[1], true); //Point towards the goal
+      if(error_d < 100) { 
 
+        error_x = 1250 - pose.x;
         error_y = team[1] - pose.y;
         error_theta = getErrorTheta(pose, error_x, error_y);
+        driveToPoint(pose, 1250, team[1], true); //Point towards the goal
 
         if(abs(error_theta) < 5) { 
           servo2.write(servoUP); 
@@ -241,17 +241,20 @@ void loop() {
           servo3.writeMicroseconds(1700); //Go backwards
           servo4.writeMicroseconds(1300);
           delay(1000);
-          servo3.writeMicroseconds(1500); //Stop 
-          servo4.writeMicroseconds(1500);
+          servo3.writeMicroseconds(1600); //Turn back 
+          servo4.writeMicroseconds(1600);
           delay(1500);
           state = 1;
         }
+      }
+      else {
+        driveToPoint(pose, 1250, team[0], false);
       }
       break;
 
     /* Defend */
     case 3: 
-      Serial.printf("\nCurrent Position: %d, %d", pose.x, pose.y);
+      //Serial.printf("\nCurrent Position: %d, %d", pose.x, pose.y);
       //delay(100);
 
       servo2.write(servoDW);
@@ -259,15 +262,15 @@ void loop() {
       error_y = team[2] - pose.y;
       error_d = getErrorD(pose, error_x, error_y);
 
-      if(error_d < 100){
+      if(error_d < 100) {
         // Serial.println("Turning parallel to goal");
-        // Serial.printf("\tDriving to: %d, %d", 10, team[2]);
+        Serial.printf("\tDriving to: %d, %d", 10, team[2]);
         driveToPoint(pose, 10, team[2], true);
       }
 
       else {
         // Serial.println("Driving to defensive position");
-        // Serial.printf("\tTurning to: %d, %d", 1300, team[2]);
+        Serial.printf("\tTurning to: %d, %d", 1300, team[2]);
         driveToPoint(pose, 1300, team[2], false);
       }
       break;
