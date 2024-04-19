@@ -22,7 +22,7 @@ double Kp2 = 4.0;
 int omega_1; int omega_2;
 
 //IR sensor stuff
-double kp = 21; double ki = 151; double kd = 0.263;
+double kp = 10; double ki = 0; double kd = 0;
 double setpoint = 0; int pos = 0;
 int irSensor1Pin = 34;
 extern double output1;
@@ -125,9 +125,9 @@ void setup() {
   pinMode(limit2, INPUT);
 
   //Vision: IR sensor and DC motor
-  setupDCMotors();
-  setPIDgains1(kp,ki,kd);
-  pinMode(irSensor1Pin,INPUT);
+  //setupDCMotors();
+  //setPIDgains1(kp,ki,kd);
+  //pinMode(irSensor1Pin,INPUT);
 
   //RGB LED and Photoresistor
   pinMode(sensorPin, INPUT);
@@ -150,7 +150,7 @@ void setup() {
 }
 
 void loop() {
-  Serial.printf("err:%d , pos:%d, target:%d\n",getError1(),getPosition1(),getSetpoint1());
+  //Serial.printf("err:%d , pos:%d, target:%d\n",getError1(),getPosition1(),getSetpoint1());
   int prevState = state;
 
   //Get robot pose and ball position

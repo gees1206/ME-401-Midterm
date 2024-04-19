@@ -35,7 +35,7 @@ const int MAX_DUTY_CYCLE = (int)(pow(2, PWMResolution) - 1);
 
         // TODO: STUDENTS NEED TO FIND THE RIGHT CONTROL GAINS FOR GOOD POSITION CONTROL
         // You can set the gains manually here, or inside main.cpp using function setPIDGains1(kp, ki, kd)
-        double kp1=0.0,ki1=0.0,kd1=0.0;
+        double kp1=10,ki1=0.0,kd1=0.0;
 
         
         // 
