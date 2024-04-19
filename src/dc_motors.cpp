@@ -51,8 +51,8 @@ const int MAX_DUTY_CYCLE = (int)(pow(2, PWMResolution) - 1);
         const int MOT1_CH_IN1 = 4;
         const int MOT1_CH_IN2 = 5;
 
-        const char ENC1_CHANA_PIN = 14;
-        const char ENC1_CHANB_PIN = 27;
+        const char ENC1_CHANB_PIN = 14;
+        const char ENC1_CHANA_PIN = 27;
         const char MOT1_IN1_PIN = 13;
         const char MOT1_IN2_PIN = 12;
 

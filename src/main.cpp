@@ -6,6 +6,7 @@
 #include "servo_motors.h"
 #include "communications.h"
 #include "stdint.h"
+#include "IR.h"
 
 //Communications and positional
 int myID = 10;
@@ -113,6 +114,8 @@ int getNearestBall(RobotPose pose, BallPosition balzz[20], int numBalzz){
 
 void setup() {
   Serial.begin(115200);
+  
+  
 
   //Comment out when testing outside the 401 room
   setupCommunications();
@@ -143,9 +146,11 @@ void setup() {
   servo4.attach(SERVO4_PIN, 1300, 1700);  //ligt
   servo3.writeMicroseconds(1500); //Servos 0 velocity
   servo4.writeMicroseconds(1500);
+  IRINIT();
 }
 
 void loop() {
+  Serial.printf("err:%d , pos:%d, target:%d\n",getError1(),getPosition1(),getSetpoint1());
   int prevState = state;
 
   //Get robot pose and ball position
@@ -171,11 +176,11 @@ void loop() {
     state = 1;
   }
   else if (pose.valid == false) { 
-    Serial.println("Pose not valid");
+    //Serial.println("Pose not valid");
     state = 0; //Do nothing (Stop)
   }
   else if (numBalzz < 1 && state != 2) { 
-    Serial.println("No more balls");
+    //Serial.println("No more balls");
     state = 3; //Go defend
   }
   
@@ -203,14 +208,14 @@ void loop() {
       error_theta = getErrorTheta(pose, error_x, error_y);
 
       if((error_d <= 205) && (abs(error_theta) < 12)){ 
-        Serial.println("Capturing the ball");
+        //Serial.println("Capturing the ball");
         servo3.writeMicroseconds(1425);
         servo4.writeMicroseconds(1575);
         servo2.write(servoDW); //Lower the gate
         state = 2;
       }
       else { // Drive to the closest ball
-        Serial.println("Driving to ball");
+        //Serial.println("Driving to ball");
         driveToPoint(pose, b_x, b_y, false);
         servo2.write(servoUP); //Open the gate
       }
@@ -218,7 +223,7 @@ void loop() {
 
     // Shoot the ball
     case 2: 
-      Serial.println("Shooting the ball");
+      //Serial.println("Shooting the ball");
       //Go to a point infront of the goal 
       servo2.write(servoDW);
       driveToPoint(pose, 1150, 300, false);
