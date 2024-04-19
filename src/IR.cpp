@@ -26,7 +26,7 @@ void IRINIT(){
       "IRSCAN", /* Name of the task */
       10000,  /* Stack size in words */
       NULL,  /* Task input parameter */
-      1,  /* Priority of the task */
+      0,  /* Priority of the task */
       &Task1,  /* Task handle. */
       tskNO_AFFINITY); /* Core where the task should run */
     Serial.println("Task Created");

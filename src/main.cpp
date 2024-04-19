@@ -118,7 +118,7 @@ void setup() {
   
 
   //Comment out when testing outside the 401 room
-  setupCommunications();
+  //setupCommunications();
 
   //Limit switches
   pinMode(limit1, INPUT);
