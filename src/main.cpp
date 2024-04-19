@@ -183,6 +183,11 @@ void loop() {
   if(left_switch > 10) {
     state = 4;
   }
+
+  /*
+      CHECK OBSTACLE HERE!!
+  */
+
   
   /**
    * This is the main state machine. It determines which state the robot is in.
