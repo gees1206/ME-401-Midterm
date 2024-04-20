@@ -28,6 +28,20 @@ extern double output1;
 // Declare used pin & values
 int irSensor1Pin = 35;
 
+const int meadiancounter = 100;
+int values[meadiancounter] = {};
+int irSensor1Value;
+int IRcounter = 0;
+int SumValues = 0;
+float median;
+
+int cameraCounter = 0;
+
+bool forward_obstacle = 0;
+bool backward_obstacle = 0;
+
+int ir_counter = 0;
+
 /* limit switch stuff */
 int limit1 = 36; // Back limit
 
@@ -112,7 +126,7 @@ int getNearestBall(RobotPose pose, BallPosition balzz[20], int numBalzz) {
 
   for(int i = 0; i < numBalzz; i++) {
     balldistance = sqrt((pose.x-balzz[i].x)*(pose.x-balzz[i].x) + (pose.y-balzz[i].y)*(pose.y-balzz[i].y));
-    if(balldistance < closestdistance && ((balzz[i].y > 50) && (balzz[i].y < 2500)) ) {
+    if(balldistance < closestdistance && ((balzz[i].y > 50) && (balzz[i].y < 2400)) ) {
       nearestball = i;
       closestdistance = balldistance; 
     }
@@ -120,14 +134,29 @@ int getNearestBall(RobotPose pose, BallPosition balzz[20], int numBalzz) {
   return nearestball;
 }
 
+float convertVoltage2Distance() {
+    for (IRcounter; IRcounter<meadiancounter; IRcounter++){
+      irSensor1Value = analogRead(irSensor1Pin);
+      values[IRcounter] = irSensor1Value;
+      SumValues = SumValues + irSensor1Value;
+    }
+    median = SumValues/meadiancounter;
+    //Serial.println(median);
+    SumValues = 0;
+    IRcounter = 0;
+
+    float distance = 20897*pow(median, -1.023);
+    return distance;
+  }
+
 void sweepIR() {
-  int distance = analogRead(irSensor1Pin);
+  int distance = convertVoltage2Distance();
   Serial.printf("IR distance: %d\n", analogRead(distance));
   setSetpoint1(30*7);
   delay(500);
 
-  distance = analogRead(irSensor1Pin);
-  if(analogRead(distance) > 1500 && analogRead(distance) < 2500) {
+  distance = convertVoltage2Distance();
+  if(convertVoltage2Distance() < 12) {
     Serial.println("Avoiding obstacle");
     servo3.writeMicroseconds(1700); //Go backwards
     servo4.writeMicroseconds(1300); 
@@ -143,8 +172,8 @@ void sweepIR() {
   setSetpoint1(-30*7);
   delay(500);
 
-  distance = analogRead(irSensor1Pin);
-  if(analogRead(distance) > 1500 && analogRead(distance) < 2500) {
+  distance = convertVoltage2Distance();
+  if(convertVoltage2Distance() < 12) {
     Serial.println("Avoiding obstacle");
     servo3.writeMicroseconds(1700); //Go backwards
     servo4.writeMicroseconds(1300); 
@@ -157,8 +186,8 @@ void sweepIR() {
   setSetpoint1(0);
   delay(500);
   
-  distance = analogRead(irSensor1Pin);
-  if(analogRead(distance) > 1500 && analogRead(distance) < 2500) {
+  distance = convertVoltage2Distance();
+  if(convertVoltage2Distance() < 12) {
     Serial.println("Avoiding obstacle");
     servo3.writeMicroseconds(1700); //Go backwards
     servo4.writeMicroseconds(1300); 
