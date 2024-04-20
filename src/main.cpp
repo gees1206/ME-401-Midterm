@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-#include "debug.h"
+//#include "debug.h"
 #include "common.h"
 #include "dc_motors.h"
 #include "servo_motors.h"
@@ -27,7 +27,6 @@ extern double output1;
 // Declare Functions
 // Declare used pin & values
 int irSensor1Pin = 35;
-
 
 /* limit switch stuff */
 int limit1 = 36; // Back limit
@@ -113,7 +112,7 @@ int getNearestBall(RobotPose pose, BallPosition balzz[20], int numBalzz) {
 
   for(int i = 0; i < numBalzz; i++) {
     balldistance = sqrt((pose.x-balzz[i].x)*(pose.x-balzz[i].x) + (pose.y-balzz[i].y)*(pose.y-balzz[i].y));
-    if(balldistance < closestdistance) {
+    if(balldistance < closestdistance && ((balzz[i].y > 50) && (balzz[i].y < 2500)) ) {
       nearestball = i;
       closestdistance = balldistance; 
     }
@@ -122,11 +121,13 @@ int getNearestBall(RobotPose pose, BallPosition balzz[20], int numBalzz) {
 }
 
 void sweepIR() {
-  Serial.printf("IR distance: %d", analogRead(irSensor1Pin));
+  int distance = analogRead(irSensor1Pin);
+  Serial.printf("IR distance: %d\n", analogRead(distance));
   setSetpoint1(30*7);
   delay(500);
 
-  if(analogRead(irSensor1Pin) > 1000 && analogRead(irSensor1Pin) < 2500) {
+  distance = analogRead(irSensor1Pin);
+  if(analogRead(distance) > 1500 && analogRead(distance) < 2500) {
     Serial.println("Avoiding obstacle");
     servo3.writeMicroseconds(1700); //Go backwards
     servo4.writeMicroseconds(1300); 
@@ -142,29 +143,28 @@ void sweepIR() {
   setSetpoint1(-30*7);
   delay(500);
 
-  if(analogRead(irSensor1Pin) > 1000 && analogRead(irSensor1Pin) < 2500) {
+  distance = analogRead(irSensor1Pin);
+  if(analogRead(distance) > 1500 && analogRead(distance) < 2500) {
     Serial.println("Avoiding obstacle");
     servo3.writeMicroseconds(1700); //Go backwards
     servo4.writeMicroseconds(1300); 
     delay(1000);  
     servo3.writeMicroseconds(1600); //Turn left?
     servo4.writeMicroseconds(1600); 
-    delay(500);
-    servo3.writeMicroseconds(1300); //Go forward
-    servo4.writeMicroseconds(1700); 
-    delay(1000);  
+    delay(1200);
     return;
   }
   setSetpoint1(0);
   delay(500);
-
-  if(analogRead(irSensor1Pin) > 1000 && analogRead(irSensor1Pin) < 2500) {
+  
+  distance = analogRead(irSensor1Pin);
+  if(analogRead(distance) > 1500 && analogRead(distance) < 2500) {
     Serial.println("Avoiding obstacle");
     servo3.writeMicroseconds(1700); //Go backwards
     servo4.writeMicroseconds(1300); 
     delay(1000);  
-    servo3.writeMicroseconds(1600); //Turn left?
-    servo4.writeMicroseconds(1600); 
+    servo3.writeMicroseconds(1400); //Turn right?
+    servo4.writeMicroseconds(1400); 
     delay(500);
     servo3.writeMicroseconds(1300); //Go forward
     servo4.writeMicroseconds(1700); 
@@ -177,7 +177,7 @@ void setup() {
   Serial.begin(115200);
 
   /* Comment out when testing without comms */
-  //setupCommunications();
+  setupCommunications();
 
   /* Limit switches */
   pinMode(limit1, INPUT);
@@ -209,7 +209,6 @@ void setup() {
 }
 
 void loop() {
-
   sweepIR();
   int prevState = state;
   Serial.printf("IR distance: %d\n", analogRead(irSensor1Pin));
@@ -233,7 +232,6 @@ void loop() {
     Serial.println("Pose not valid");
     state = 0; // Do nothing (Stop)
   }
-
   else if (!(numBalzz >= 1) && state != 2) { 
     Serial.println("No more balls");
     state = 3; // Go defend
@@ -243,6 +241,9 @@ void loop() {
   if(left_switch > 10) {
     state = 4;
   }
+
+  Serial.printf("\nCurrent Position: %d, %d", pose.x, pose.y);
+
   // DC motors
   // D_print("SETPOINT:"); D_print(getSetpoint1()); D_print("   POS:"); D_print(getPosition1()); D_print("    ERR:"); D_print(getError1());
   // D_print("    OUTPUT:"); D_println(getOutput1());
@@ -378,8 +379,6 @@ void loop() {
 
     /* Defend */
     case 3: 
-      //Serial.printf("\nCurrent Position: %d, %d", pose.x, pose.y);
-      //delay(100);
 
       servo2.write(servoDW);
       error_x = midfield_x + 75 - pose.x;
