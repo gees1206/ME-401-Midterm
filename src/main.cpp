@@ -1,5 +1,4 @@
 #include <Arduino.h>
-
 //#include "debug.h"
 #include "common.h"
 #include "dc_motors.h"
@@ -9,47 +8,23 @@
 
 /* Communications and positional */
 int myID = 10;
-int ballNum;
-int b_x = 0; int b_y = 0;
-int error_x; int error_y;
-int error_d; int error_theta;
+int b_x = 0, b_y = 0;
+int error_x, error_y;
+int error_d, error_theta;
 
-double Kp1 = 0.5; // Kd1 = 0.5
-double Kp2 = 4.5; // Kd2 = 4.0
-int omega_1; int omega_2;
+// Kp1 = 0.5, Kp2 = 4.5
+double Kp1 = 0.5, Kp2 = 4.5;
+int omega_1, omega_2;
 
-/* IR sensor stuff */
+/* DC motor */
 double kp = 100, ki = 10, kd = 1.5;
-double setpoint = 0; int pos = 0;
-
-extern double output1;
-// IR Sensor 
-// Declare Functions
-// Declare used pin & values
-int irSensor1Pin = 35;
-
-const int meadiancounter = 100;
-int values[meadiancounter] = {};
-int irSensor1Value;
-int IRcounter = 0;
-int SumValues = 0;
-float median;
-
-int cameraCounter = 0;
-
-bool forward_obstacle = 0;
-bool backward_obstacle = 0;
-
-int ir_counter = 0;
-
-/* limit switch stuff */
-int limit1 = 36; // Back limit
-
+/* IR Sensor */ 
+int irSensorPin = 35;
+/* limit switch */
+int limitBackPin = 36;
 /* LED and sensor pin setup */
-int sensorPin = 32;
-int bluePin = 23;
-int greenPin = 22;
-int redPin = 19;
+int lightSensorPin = 32;
+int bluePin = 23, greenPin = 22, redPin = 19;
 int maxblack[] = {2336,2382,2480};
 int minwhite[] = {871,844,855};
 int color[] = {0,0,0};
@@ -64,12 +39,26 @@ int midfield_x = 1225;
 
 int state = 1; //Default state is drive to ball
 
-
-int getErrorD(RobotPose pose, int error_x, int error_y) {
+/**
+ * Gets distance to a point
+ *
+ * @param error_x error in x position to a point
+ * @param error_y error in y position to a point
+ * @return Returns the distance error to a point
+ */
+int getErrorD(int error_x, int error_y) {
   int distance = sqrt((error_x * error_x) + (error_y * error_y));
   return distance;
 }
 
+/**
+ * Gets angle from robot x axis to a point
+ *
+ * @param pose Most up-to date robot position.
+ * @param error_x error in x position to a point
+ * @param error_y error in y position to a point
+ * @return Returns the angle error to a point
+ */
 int getErrorTheta(RobotPose pose, int error_x, int error_y) {
   int theta = ((1000*atan2(error_y, error_x)) - pose.theta) * (180 / (PI*1000));
 
@@ -93,14 +82,11 @@ int getErrorTheta(RobotPose pose, int error_x, int error_y) {
  */
 void driveToPoint(RobotPose pose, int d_x, int d_y, bool rotate_only) {
 
-  int rot = 1;
-  if (rotate_only == true) {
-    rot = 0;
-  }
+  int rot = (rotate_only == true) ? 0 : 1;
 
   int error_x = d_x - pose.x;
   int error_y = d_y - pose.y;
-  int error_d = getErrorD(pose, error_x, error_y);
+  int error_d = getErrorD(error_x, error_y);
   int error_theta = getErrorTheta(pose, error_x, error_y);
 
   omega_1 = 0.5*(-Kp1*error_d*rot - Kp2*error_theta);
@@ -121,12 +107,12 @@ void driveToPoint(RobotPose pose, int d_x, int d_y, bool rotate_only) {
 int getNearestBall(RobotPose pose, BallPosition balzz[20], int numBalzz) {
   int nearestball = 0;
   double balldistance = 0;
-  int closest = 0;
-  double closestdistance = 999;
+  double closestdistance = 9999;
 
   for(int i = 0; i < numBalzz; i++) {
-    balldistance = sqrt((pose.x-balzz[i].x)*(pose.x-balzz[i].x) + (pose.y-balzz[i].y)*(pose.y-balzz[i].y));
-    if(balldistance < closestdistance && ((balzz[i].y > 50) && (balzz[i].y < 2400)) ) {
+    balldistance = getErrorD(pose.x-balzz[i].x, pose.y-balzz[i].y);
+    // balldistance = sqrt((pose.x-balzz[i].x)*(pose.x-balzz[i].x) + (pose.y-balzz[i].y)*(pose.y-balzz[i].y));
+    if(balldistance < closestdistance) {
       nearestball = i;
       closestdistance = balldistance; 
     }
@@ -134,155 +120,91 @@ int getNearestBall(RobotPose pose, BallPosition balzz[20], int numBalzz) {
   return nearestball;
 }
 
-float convertVoltage2Distance() {
-    for (IRcounter; IRcounter<meadiancounter; IRcounter++){
-      irSensor1Value = analogRead(irSensor1Pin);
-      values[IRcounter] = irSensor1Value;
-      SumValues = SumValues + irSensor1Value;
-    }
-    median = SumValues/meadiancounter;
-    //Serial.println(median);
-    SumValues = 0;
-    IRcounter = 0;
-
-    float distance = 20897*pow(median, -1.023);
-    return distance;
+/**
+ * Get IR sensor reading.
+ * @return returns mean reading across 50 values
+ */
+int getIR_Distance() {
+  int sum = 0;
+  for (int i = 0; i < 50; i++){
+    sum = sum + analogRead(irSensorPin);
   }
+  int distance = sum / 50;
+  return distance;
+}
 
-void sweepIR() {
-  int distance = convertVoltage2Distance();
-  Serial.printf("IR distance: %d\n", analogRead(distance));
-  setSetpoint1(30*7);
-  delay(500);
-
-  distance = convertVoltage2Distance();
-  if(convertVoltage2Distance() < 12) {
+/**
+ * Check if there is an obstacle.
+ * @return none
+ */
+void getIR() {
+  if (getIR_Distance() > 1300) {
     Serial.println("Avoiding obstacle");
     servo3.writeMicroseconds(1700); //Go backwards
     servo4.writeMicroseconds(1300); 
     delay(1000);  
-    servo3.writeMicroseconds(1600); //Turn left?
+    servo3.writeMicroseconds(1600); //Turn left
     servo4.writeMicroseconds(1600); 
     delay(500);
     servo3.writeMicroseconds(1300); //Go forward
     servo4.writeMicroseconds(1700); 
-    delay(1000);  
-    return;
-  }
-  setSetpoint1(-30*7);
-  delay(500);
-
-  distance = convertVoltage2Distance();
-  if(convertVoltage2Distance() < 12) {
-    Serial.println("Avoiding obstacle");
-    servo3.writeMicroseconds(1700); //Go backwards
-    servo4.writeMicroseconds(1300); 
-    delay(1000);  
-    servo3.writeMicroseconds(1600); //Turn left?
-    servo4.writeMicroseconds(1600); 
-    delay(1200);
-    return;
-  }
-  setSetpoint1(0);
-  delay(500);
-  
-  distance = convertVoltage2Distance();
-  if(convertVoltage2Distance() < 12) {
-    Serial.println("Avoiding obstacle");
-    servo3.writeMicroseconds(1700); //Go backwards
-    servo4.writeMicroseconds(1300); 
-    delay(1000);  
-    servo3.writeMicroseconds(1400); //Turn right?
-    servo4.writeMicroseconds(1400); 
-    delay(500);
-    servo3.writeMicroseconds(1300); //Go forward
-    servo4.writeMicroseconds(1700); 
-    delay(1000);  
+    delay(1000);
     return;
   }
 }
 
 void setup() {
   Serial.begin(115200);
-
   /* Comment out when testing without comms */
   setupCommunications();
-
   /* Limit switches */
-  pinMode(limit1, INPUT);
-
+  pinMode(limitBackPin, INPUT);
   /* Vision: IR sensor and DC motor */
   setupDCMotors();
   setPIDgains1(kp, ki, kd);
-  pinMode(irSensor1Pin, INPUT);
+  pinMode(irSensorPin, INPUT);
   setSetpoint1(0);
-
   /* RGB LED and Photoresistor */
-  pinMode(sensorPin, INPUT);
+  pinMode(lightSensorPin, INPUT);
   pinMode(redPin, OUTPUT);
   pinMode(greenPin, OUTPUT);
   pinMode(bluePin, OUTPUT);
-
   /* Servos */
   setupServos();
-  servo1.attach(SERVO1_PIN, 500, 2400);
-  servo2.attach(SERVO2_PIN, 500, 2400);   //Servo 2 is shooter
-  servo3.attach(SERVO3_PIN, 1300, 1700);  //rigt
-  servo4.attach(SERVO4_PIN, 1300, 1700);  //ligt
-
+  servo2.attach(SERVO2_PIN, 500, 2400);   //Arm servo
+  servo3.attach(SERVO3_PIN, 1300, 1700);  //Right driving servo
+  servo4.attach(SERVO4_PIN, 1300, 1700);  //Left driving servo
+  /* Servo 0 pos and velocity */
   servo2.write(servoUP);
   servo3.writeMicroseconds(1500); //Servos 0 velocity
   servo4.writeMicroseconds(1500);
-  //setupDCMotors();
-  //setPIDgains1(10,0,0);
 }
 
 void loop() {
-  sweepIR();
-  int prevState = state;
-  Serial.printf("IR distance: %d\n", analogRead(irSensor1Pin));
+
   RobotPose pose = getRobotPose(myID);
+  //Serial.printf("\nCurrent Position: %d, %d", pose.x, pose.y);
   BallPosition balzz[20];
   int numBalzz = getBallPositions(balzz);
-  // Serial.printf("\n Number of balls: %d", numBalzz);
   
+  Kp2 = 4.5;
+  int prevState = state;
+
   if (pose.valid == true && state != 2 && numBalzz >= 1) { 
-    int nearestball = getNearestBall(pose, balzz, numBalzz);
-    b_x = balzz[nearestball].x;
-    b_y = balzz[nearestball].y;
-    int error_x = b_x - pose.x;
-    int error_y = b_y - pose.y;
-    // Serial.printf("\n Ballpos: %d, %d", b_x, b_y);
-
     state = 1; // Shooting
-  }
-
-  else if (pose.valid == false) { 
-    Serial.println("Pose not valid");
-    state = 0; // Do nothing (Stop)
   }
   else if (!(numBalzz >= 1) && state != 2) { 
     Serial.println("No more balls");
     state = 3; // Go defend
   }
-  
-  int left_switch =  analogRead(limit1);
-  if(left_switch > 10) {
-    state = 4;
+  else if (pose.valid == false) { 
+    Serial.println("Pose not valid");
+    state = 0; // Do nothing (Stop)
   }
 
-  Serial.printf("\nCurrent Position: %d, %d", pose.x, pose.y);
+  analogRead(limitBackPin) > 10 ? state = 4: state =state;
+  getIR();
 
-  // DC motors
-  // D_print("SETPOINT:"); D_print(getSetpoint1()); D_print("   POS:"); D_print(getPosition1()); D_print("    ERR:"); D_print(getError1());
-  // D_print("    OUTPUT:"); D_println(getOutput1());
-
-
-  /**
-   * This is the main state machine. It determines which state the robot is in.
-   * We need to keep track of variable called 'state'!!! and change it when appropriate.
-   * i.e. Change it from 
-   **/
   switch(state) {
 
     /* Do nothing (Stop) */
@@ -294,12 +216,12 @@ void loop() {
 
     /* Capture the ball */
     case 1: 
+      b_x = balzz[getNearestBall(pose, balzz, numBalzz)].x;
+      b_y = balzz[getNearestBall(pose, balzz, numBalzz)].y;
       error_x = b_x - pose.x;
       error_y = b_y - pose.y;
-      error_d = getErrorD(pose, error_x, error_y);
-      error_theta = getErrorTheta(pose, error_x, error_y);
 
-      if((error_d <= 210) && (abs(error_theta) < 10)) { 
+      if((getErrorD(error_x, error_y) <= 210) && (abs(getErrorTheta(pose, error_x, error_y)) < 8)) { 
         Serial.println("Capturing the ball");
         servo3.writeMicroseconds(1425); //Go forward
         servo4.writeMicroseconds(1575);
@@ -307,7 +229,7 @@ void loop() {
         state = 2;
       }
       else { 
-        Serial.printf("\nDriving to ball (%d,%d)",b_x,b_y);
+        Serial.printf("\nDriving to ball (%d,%d)", b_x, b_y);
         driveToPoint(pose, b_x, b_y, false);
         servo2.write(servoUP); 
       }
@@ -317,77 +239,33 @@ void loop() {
     case 2: 
       Serial.println("Shooting the ball");
 
-      servo2.write(servoDW); 
-      error_x = midfield_x - pose.x;
-      error_y = team[0] - pose.y;
-      error_d = getErrorD(pose, error_x, error_y);
-
-      // We will need to implement the color sensor here
-      // if(error_d < 666 && (color is blue/red)){
-      //   shoot the ball;}
-      if(error_d < 150) { 
-        
-        error_x = midfield_x - pose.x;
-        error_y = team[1] - pose.y;
-        error_theta = getErrorTheta(pose, error_x, error_y);
+      if(getErrorD(midfield_x - pose.x, team[0] - pose.y) < 150) { 
         Kp2 = 2;
         driveToPoint(pose, midfield_x, team[1], true); //Point towards the goal
-        Kp2 = 4.5;
 
-        if(abs(error_theta) < 5) {
-          //Austin here, adding the color stuff. Wanting to try to find the color 3 times then shoot anyways if it isn't right.
+        if (abs(getErrorTheta(pose, midfield_x - pose.x, team[1] - pose.y)) < 5) {
+          
+          //Check color of zone were in 3 times, if good shoot, if not shoot anyway after 3 tries
           for(int i = 0; i < 3; i++) {
-            //Flashing through all 3 colors and reading photoresistor values.
             digitalWrite(redPin,HIGH);
-            delay(10); // wait for the photresistor value to settle
-            color[0] = analogRead(sensorPin); // read the photoresistor value
+            delay(10); 
+            color[0] = analogRead(lightSensorPin);
             digitalWrite(redPin,LOW);
 
             digitalWrite(greenPin,HIGH);
-            delay(10); // wait for the photresistor value to settle
-            color[1] = analogRead(sensorPin); // read the photoresistor value
+            delay(10); 
+            color[1] = analogRead(lightSensorPin);
             digitalWrite(greenPin,LOW);
             
             digitalWrite(bluePin,HIGH);
-            delay(10); // wait for the photresistor value to settle
-            color[2] = analogRead(sensorPin); // read the photoresistor value
+            delay(10);
+            color[2] = analogRead(lightSensorPin);
             digitalWrite(bluePin,LOW);
 
-            //Assuming we're on blue paper, red team
-            if(color[0] > 1500 && color[1] < 1300 && team[3] == 2) {
-              servo2.write(servoUP); 
-              servo3.writeMicroseconds(1300); //Go forward
-              servo4.writeMicroseconds(1700);
-              delay(1000);
-              servo3.writeMicroseconds(1700); //Go backwards
-              servo4.writeMicroseconds(1300);
-              delay(1000);
-              servo3.writeMicroseconds(1600); //Turn back 
-              servo4.writeMicroseconds(1600);
-              delay(1500);
-              state = 1;
-              break;
+            if((color[0] > 1500 && color[1] < 1300 && team[3] == 2) || (color[0] < 1100 && color[1] > 1600 && team[3] == 1)) {
+              i = 4;
             }
-            //and if we're on red paper, blue team
-            if(color[0] < 1100 && color[1] > 1600 && team[3] == 1){
-              servo2.write(servoUP); 
-              servo3.writeMicroseconds(1300); //Go forward
-              servo4.writeMicroseconds(1700);
-              delay(1000);
-              servo3.writeMicroseconds(1700); //Go backwards
-              servo4.writeMicroseconds(1300);
-              delay(1000);
-              servo3.writeMicroseconds(1600); //Turn back 
-              servo4.writeMicroseconds(1600);
-              delay(1500);
-              state = 1;
-              break;
-            }
-            //Need to clear color afterwards
-            color[0] = 0;
-            color[1] = 0;
-            color[2] = 0;
-          } 
+          }
           servo2.write(servoUP); 
           servo3.writeMicroseconds(1300); //Go forward
           servo4.writeMicroseconds(1700);
@@ -408,46 +286,28 @@ void loop() {
 
     /* Defend */
     case 3: 
-
       servo2.write(servoDW);
-      error_x = midfield_x + 75 - pose.x;
-      error_y = team[2] - pose.y;
-      error_d = getErrorD(pose, error_x, error_y);
 
-      if(error_d < 100) {
-        // Serial.println("Turning parallel to goal");
-        Serial.printf("\tDriving to: %d, %d", 10, team[2]);
+      if(getErrorD(midfield_x + 75 - pose.x, team[2] - pose.y) < 100) {
+        Serial.println("Turning parallel to goal");
         driveToPoint(pose, 10, team[2], true);
       }
-
       else {
-        // Serial.println("Driving to defensive position");
-        Serial.printf("\tTurning to: %d, %d", (midfield_x + 75), team[2]);
+        Serial.println("Driving to defensive position");
         driveToPoint(pose, (midfield_x + 75), team[2], false);
       }
       break;
     
-    case 4: //Back swich avoidance
+    case 4: //Back switch avoidance
       servo3.writeMicroseconds(1300); //Go forward
       servo4.writeMicroseconds(1700); 
       delay(1000);  
-      servo3.writeMicroseconds(1600); //Turn left?
+      servo3.writeMicroseconds(1600); //Turn left
       servo4.writeMicroseconds(1600); 
       delay(500);
       break;
   }
 }
-
-// for(int i = 0; i < numBalzz; i++){
-//   Serial.printf("c:%d\tx:%d\ty:%d\n", balzz[i].hue,balzz[i].x,balzz[i].y);
-// } 
-
-//Sensor Data
-//printf(" %d IR distance\n ", analogRead(irSensor1Pin));
-//printf("%d color\n", analogRead(sensorPin));
-
-// Serial.printf("Left Switch: %d\n", analogRead(36));
-// Serial.printf("Right Switch: %d\n", analogRead(39));
 
 // DC motors
 // D_print("SETPOINT:"); D_print(getSetpoint1()); D_print("   POS:"); D_print(getPosition1()); D_print("    ERR:"); D_print(getError1());
