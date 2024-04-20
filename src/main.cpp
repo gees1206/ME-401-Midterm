@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-// #include "debug.h"
+#include "debug.h"
 #include "common.h"
 #include "dc_motors.h"
 #include "servo_motors.h"
@@ -19,14 +19,18 @@ double Kp2 = 4.5; // Kd2 = 4.0
 int omega_1; int omega_2;
 
 /* IR sensor stuff */
-double kp = 21; double ki = 151; double kd = 0.263;
+double kp = 100, ki = 10, kd = 1.5;
 double setpoint = 0; int pos = 0;
-int irSensor1Pin = 34;
+
 extern double output1;
+// IR Sensor 
+// Declare Functions
+// Declare used pin & values
+int irSensor1Pin = 35;
+
 
 /* limit switch stuff */
-int limit1 = 36; // left
-int limit2 = 39; // right
+int limit1 = 36; // Back limit
 
 /* LED and sensor pin setup */
 int sensorPin = 32;
@@ -117,20 +121,72 @@ int getNearestBall(RobotPose pose, BallPosition balzz[20], int numBalzz) {
   return nearestball;
 }
 
+void sweepIR() {
+  Serial.printf("IR distance: %d", analogRead(irSensor1Pin));
+  setSetpoint1(30*7);
+  delay(500);
+
+  if(analogRead(irSensor1Pin) > 1000 && analogRead(irSensor1Pin) < 2500) {
+    Serial.println("Avoiding obstacle");
+    servo3.writeMicroseconds(1700); //Go backwards
+    servo4.writeMicroseconds(1300); 
+    delay(1000);  
+    servo3.writeMicroseconds(1600); //Turn left?
+    servo4.writeMicroseconds(1600); 
+    delay(500);
+    servo3.writeMicroseconds(1300); //Go forward
+    servo4.writeMicroseconds(1700); 
+    delay(1000);  
+    return;
+  }
+  setSetpoint1(-30*7);
+  delay(500);
+
+  if(analogRead(irSensor1Pin) > 1000 && analogRead(irSensor1Pin) < 2500) {
+    Serial.println("Avoiding obstacle");
+    servo3.writeMicroseconds(1700); //Go backwards
+    servo4.writeMicroseconds(1300); 
+    delay(1000);  
+    servo3.writeMicroseconds(1600); //Turn left?
+    servo4.writeMicroseconds(1600); 
+    delay(500);
+    servo3.writeMicroseconds(1300); //Go forward
+    servo4.writeMicroseconds(1700); 
+    delay(1000);  
+    return;
+  }
+  setSetpoint1(0);
+  delay(500);
+
+  if(analogRead(irSensor1Pin) > 1000 && analogRead(irSensor1Pin) < 2500) {
+    Serial.println("Avoiding obstacle");
+    servo3.writeMicroseconds(1700); //Go backwards
+    servo4.writeMicroseconds(1300); 
+    delay(1000);  
+    servo3.writeMicroseconds(1600); //Turn left?
+    servo4.writeMicroseconds(1600); 
+    delay(500);
+    servo3.writeMicroseconds(1300); //Go forward
+    servo4.writeMicroseconds(1700); 
+    delay(1000);  
+    return;
+  }
+}
+
 void setup() {
   Serial.begin(115200);
 
   /* Comment out when testing without comms */
-  setupCommunications();
+  //setupCommunications();
 
   /* Limit switches */
   pinMode(limit1, INPUT);
-  pinMode(limit2, INPUT);
 
   /* Vision: IR sensor and DC motor */
   setupDCMotors();
   setPIDgains1(kp, ki, kd);
   pinMode(irSensor1Pin, INPUT);
+  setSetpoint1(0);
 
   /* RGB LED and Photoresistor */
   pinMode(sensorPin, INPUT);
@@ -148,11 +204,15 @@ void setup() {
   servo2.write(servoUP);
   servo3.writeMicroseconds(1500); //Servos 0 velocity
   servo4.writeMicroseconds(1500);
+  //setupDCMotors();
+  //setPIDgains1(10,0,0);
 }
 
 void loop() {
-  int prevState = state;
 
+  sweepIR();
+  int prevState = state;
+  Serial.printf("IR distance: %d\n", analogRead(irSensor1Pin));
   RobotPose pose = getRobotPose(myID);
   BallPosition balzz[20];
   int numBalzz = getBallPositions(balzz);
@@ -166,7 +226,7 @@ void loop() {
     int error_y = b_y - pose.y;
     // Serial.printf("\n Ballpos: %d, %d", b_x, b_y);
 
-    state = 2; // Shooting
+    state = 1; // Shooting
   }
 
   else if (pose.valid == false) { 
@@ -183,12 +243,11 @@ void loop() {
   if(left_switch > 10) {
     state = 4;
   }
+  // DC motors
+  // D_print("SETPOINT:"); D_print(getSetpoint1()); D_print("   POS:"); D_print(getPosition1()); D_print("    ERR:"); D_print(getError1());
+  // D_print("    OUTPUT:"); D_println(getOutput1());
 
-  /*
-      CHECK OBSTACLE HERE!!
-  */
 
-  
   /**
    * This is the main state machine. It determines which state the robot is in.
    * We need to keep track of variable called 'state'!!! and change it when appropriate.
@@ -217,7 +276,6 @@ void loop() {
         servo2.write(servoDW); 
         state = 2;
       }
-
       else { 
         Serial.printf("\nDriving to ball (%d,%d)",b_x,b_y);
         driveToPoint(pose, b_x, b_y, false);
@@ -341,17 +399,16 @@ void loop() {
       }
       break;
     
-    case 4:
+    case 4: //Back swich avoidance
       servo3.writeMicroseconds(1300); //Go forward
-      servo4.writeMicroseconds(1700);
+      servo4.writeMicroseconds(1700); 
       delay(1000);  
       servo3.writeMicroseconds(1600); //Turn left?
-      servo4.writeMicroseconds(1600);
+      servo4.writeMicroseconds(1600); 
       delay(500);
       break;
   }
 }
-
 
 // for(int i = 0; i < numBalzz; i++){
 //   Serial.printf("c:%d\tx:%d\ty:%d\n", balzz[i].hue,balzz[i].x,balzz[i].y);
