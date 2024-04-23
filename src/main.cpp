@@ -5,6 +5,7 @@
 #include "servo_motors.h"
 #include "communications.h"
 #include "stdint.h"
+#include "MedianFilterLib.h"
 
 /* Communications and positional */
 int myID = 10;
@@ -28,6 +29,10 @@ int bluePin = 23, greenPin = 22, redPin = 19;
 int maxblack[] = {2336,2382,2480};
 int minwhite[] = {871,844,855};
 int color[] = {0,0,0};
+int ir_points[] = {-45,30,15,0,15,30,45};
+int IRSize=30;
+int irLen=7;
+MedianFilter<int> filterBoi(IRSize);
 
 /* Servo and driving */
 int servoUP = 135; int servoDW = 85;
@@ -144,8 +149,27 @@ int getIR_Distance() {
 void getIR(void* pvParameters) {
   
   for (;;) {
-    //Serial.println("Avoiding obstacle");
+    for(int i=0; i<irLen;i++){
+      setSetpoint1(ir_points[i]*7);
+      while(getError1()>5){delay(1);}
+      for(int j=0;j<IRSize;j++){
+        filterBoi.AddValue(analogRead(irSensorPin));
+      }
+
+    }
+    for(int i=irLen-1; i>=0;i--){
+      setSetpoint1(ir_points[i]*7);
+      while(getError1()>5){delay(1);}
+      for(int j=0;j<IRSize;j++){
+      filterBoi.AddValue(analogRead(irSensorPin));
+      }
+      
+
+    }
+    /*
     setSetpoint1(30*7);
+    //Serial.println("Avoiding obstacle");
+    
     delay(1000);
     if (getIR_Distance() > 1300) {
       Serial.println("Avoiding obstacle");
@@ -154,7 +178,7 @@ void getIR(void* pvParameters) {
       //
     }
     setSetpoint1(-30*7);
-    delay(1000);
+    delay(1000);*/
     
   }
 }
