@@ -18,7 +18,7 @@ double Kp1 = 0.5, Kp2 = 4.5;
 int omega_1, omega_2;
 
 /* DC motor */
-double kp = 100, ki = 10, kd = 1.5;
+double kp = 60, ki = 15, kd =1.5;
 /* IR Sensor */ 
 int irSensorPin = 34;
 /* limit switch */
@@ -29,7 +29,9 @@ int bluePin = 23, greenPin = 22, redPin = 19;
 int maxblack[] = {2336,2382,2480};
 int minwhite[] = {871,844,855};
 int color[] = {0,0,0};
-int ir_points[] = {-45,30,15,0,15,30,45};
+int ir_points[] = {-45,-30,-15,0,15,30,45};
+int ir_map[]={0,0,0,0,0,0,0};
+int LMod=0 , RMod=0;
 int IRSize=30;
 int irLen=7;
 MedianFilter<int> filterBoi(IRSize);
@@ -100,8 +102,11 @@ void driveToPoint(RobotPose pose, int d_x, int d_y, bool rotate_only) {
   omega_1 = 0.5*(-Kp1*error_d*rot - Kp2*error_theta);
   omega_2 = 0.5*(-Kp1*error_d*rot + Kp2*error_theta);
 
-  servo3.writeMicroseconds(omega_1 + 1500);
-  servo4.writeMicroseconds(-omega_2 + 1500);
+  int tpmS3 = omega_1 + 1500 + LMod;
+  int tpmS4 = -omega_2 + 1500 - RMod;
+
+  servo3.writeMicroseconds(constrain(tpmS3,1000,2000));
+  servo4.writeMicroseconds(constrain(tpmS4,1000,2000));
 }
 
 /**
@@ -142,6 +147,36 @@ int getIR_Distance() {
   return distance;
 }
 
+
+void calcAvoi(){
+
+  int irThresh=10;
+  int maxIndex=-1;
+
+  double kpIR1 = 1;
+  double kpIR2 = 1;
+
+  for(int i=0;i<irLen;i++){
+    if(ir_map[i]>irThresh){
+      if(maxIndex!=-1){
+        if(ir_map[i]>ir_map[maxIndex]){
+          maxIndex=i;
+        }
+      }else{
+        maxIndex=i;
+      }
+    }
+  }
+  if(maxIndex!=-1){
+    LMod = 0.5*(-kpIR1*ir_map[maxIndex] - kpIR2*ir_points[maxIndex]);
+    RMod = 0.5*(-kpIR1*ir_map[maxIndex] + kpIR2*ir_points[maxIndex]);
+  }
+  else{
+    LMod=0;
+    RMod=0;
+  }
+}
+
 /**
  * Check if there is an obstacle and avoid.
  * @return none
@@ -151,19 +186,24 @@ void getIR(void* pvParameters) {
   for (;;) {
     for(int i=0; i<irLen;i++){
       setSetpoint1(ir_points[i]*7);
-      while(getError1()>5){delay(1);}
+      Serial.print("Setpoint:");Serial.println(ir_points[i]);
+      while(abs(getError1())>5.0){delay(200);}
       for(int j=0;j<IRSize;j++){
         filterBoi.AddValue(analogRead(irSensorPin));
       }
+      ir_map[i]=filterBoi.GetFiltered();
+      calcAvoi();
 
     }
     for(int i=irLen-1; i>=0;i--){
       setSetpoint1(ir_points[i]*7);
-      while(getError1()>5){delay(1);}
+      Serial.print("Setpoint:");Serial.println(ir_points[i]);
+      while(abs(getError1())>5.0){delay(200);}
       for(int j=0;j<IRSize;j++){
       filterBoi.AddValue(analogRead(irSensorPin));
       }
-      
+      ir_map[i]=filterBoi.GetFiltered();
+      calcAvoi();
 
     }
     /*
@@ -348,7 +388,7 @@ void setup() {
   servo4.writeMicroseconds(1500);
 
     //create a task that executes the Task0code() function, with priority 1 and executed on core 0
-  xTaskCreatePinnedToCore(PIDcontroler, "Task1", 10000, NULL, 1, &Task1, 1);
+  //xTaskCreatePinnedToCore(PIDcontroler, "Task1", 10000, NULL, 1, &Task1, 1);
     //create a task that executes the Task0code() function, with priority 1 and executed on core 1
   xTaskCreatePinnedToCore(getIR, "Task0", 10000, NULL, 1, &Task0, 0);
 }
