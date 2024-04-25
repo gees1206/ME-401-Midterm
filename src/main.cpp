@@ -16,6 +16,10 @@ int error_d, error_theta;
 // Kp1 = 0.5, Kp2 = 4.5
 double Kp1 = 0.5, Kp2 = 4.5;
 int omega_1, omega_2;
+int LMod = 0 , RMod = 0;
+int IRSize = 30;
+int irLen = 7;
+MedianFilter<int> filterBoi(IRSize);
 
 /* DC motor */
 double kp = 60, ki = 15, kd =1.5;
@@ -31,10 +35,6 @@ int minwhite[] = {871,844,855};
 int color[] = {0,0,0};
 int ir_points[] = {-45,-30,-15,0,15,30,45};
 int ir_map[]={0,0,0,0,0,0,0};
-int LMod=0 , RMod=0;
-int IRSize=30;
-int irLen=7;
-MedianFilter<int> filterBoi(IRSize);
 
 /* Servo and driving */
 int servoUP = 135; int servoDW = 85;
@@ -105,8 +105,8 @@ void driveToPoint(RobotPose pose, int d_x, int d_y, bool rotate_only) {
   int tpmS3 = omega_1 + 1500 + LMod;
   int tpmS4 = -omega_2 + 1500 - RMod;
 
-  servo3.writeMicroseconds(constrain(tpmS3,1000,2000));
-  servo4.writeMicroseconds(constrain(tpmS4,1000,2000));
+  servo3.writeMicroseconds(tpmS3); //constrain(tpmS3,1300,1700));
+  servo4.writeMicroseconds(tpmS4); //constrain(tpmS4,1300,1700));
 }
 
 /**
@@ -146,7 +146,6 @@ int getIR_Distance() {
   Serial.printf("\nDistance: %d", distance);
   return distance;
 }
-
 
 void calcAvoi(){
 
@@ -263,12 +262,13 @@ void PIDcontroler(void* pvParameters) {
         b_y = balzz[getNearestBall(pose, balzz, numBalzz)].y;
         error_x = b_x - pose.x;
         error_y = b_y - pose.y;
-
-        if((getErrorD(error_x, error_y) <= 210) && (abs(getErrorTheta(pose, error_x, error_y)) < 8)) { 
+        Serial.printf("\tE_x: %d, \tE_y: %d, \tE_theta: %d, \tPosetheta: %d", error_x, error_y, abs(getErrorTheta(pose, error_x, error_y)), (1000*pose.theta * (180 / (PI*1000))) );
+        if((getErrorD(error_x, error_y) <= 200) && (abs(getErrorTheta(pose, error_x, error_y)) < 5)) { 
           Serial.println("Capturing the ball");
           servo3.writeMicroseconds(1425); //Go forward
           servo4.writeMicroseconds(1575);
           servo2.write(servoDW); 
+          delay(250);
           state = 2;
         }
         else { 
@@ -360,10 +360,7 @@ void PIDcontroler(void* pvParameters) {
 void setup() {
   Serial.begin(115200);
   /* Comment out when testing without comms */
-  
-  
-  //setupCommunications();
-  
+  setupCommunications();
   
   /* Limit switches */
   pinMode(limitBackPin, INPUT);
@@ -388,13 +385,12 @@ void setup() {
   servo4.writeMicroseconds(1500);
 
     //create a task that executes the Task0code() function, with priority 1 and executed on core 0
-  //xTaskCreatePinnedToCore(PIDcontroler, "Task1", 10000, NULL, 1, &Task1, 1);
+  xTaskCreatePinnedToCore(PIDcontroler, "Task1", 10000, NULL, 1, &Task1, 1);
     //create a task that executes the Task0code() function, with priority 1 and executed on core 1
-  xTaskCreatePinnedToCore(getIR, "Task0", 10000, NULL, 1, &Task0, 0);
+  // xTaskCreatePinnedToCore(getIR, "Task0", 10000, NULL, 1, &Task0, 0);
 }
 
 void loop() {
-
   //Serial.println("Loop");
   delay(10);
   
