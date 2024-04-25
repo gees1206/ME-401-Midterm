@@ -7,6 +7,12 @@
 #include "stdint.h"
 #include "MedianFilterLib.h"
 
+
+//Obstacle detected variable:
+int obstacle = 0;
+//1 = left, 2 = right
+int obstacleside = 0;
+
 /* Communications and positional */
 int myID = 10;
 int b_x = 0, b_y = 0;
@@ -16,10 +22,6 @@ int error_d, error_theta;
 // Kp1 = 0.5, Kp2 = 4.5
 double Kp1 = 0.5, Kp2 = 4.5;
 int omega_1, omega_2;
-int LMod = 0 , RMod = 0;
-int IRSize = 30;
-int irLen = 7;
-MedianFilter<int> filterBoi(IRSize);
 
 /* DC motor */
 double kp = 60, ki = 15, kd =1.5;
@@ -35,6 +37,10 @@ int minwhite[] = {871,844,855};
 int color[] = {0,0,0};
 int ir_points[] = {-45,-30,-15,0,15,30,45};
 int ir_map[]={0,0,0,0,0,0,0};
+int LMod=0 , RMod=0;
+int IRSize=30;
+int irLen=7;
+MedianFilter<int> filterBoi(IRSize);
 
 /* Servo and driving */
 int servoUP = 135; int servoDW = 85;
@@ -105,8 +111,8 @@ void driveToPoint(RobotPose pose, int d_x, int d_y, bool rotate_only) {
   int tpmS3 = omega_1 + 1500 + LMod;
   int tpmS4 = -omega_2 + 1500 - RMod;
 
-  servo3.writeMicroseconds(constrain(tpmS3,1300,1700));
-  servo4.writeMicroseconds(constrain(tpmS4,1300,1700));
+  servo3.writeMicroseconds(constrain(tpmS3,1000,2000));
+  servo4.writeMicroseconds(constrain(tpmS4,1000,2000));
 }
 
 /**
@@ -144,21 +150,23 @@ int getIR_Distance() {
   }
   int distance = sum / 50;
   Serial.printf("\nDistance: %d", distance);
+  
   return distance;
 }
 
+
 void calcAvoi(){
 
-  int irThresh=300;
+  int irThresh=10;
   int maxIndex=-1;
 
-  double kpIR1 = 2;
-  double kpIR2 = -5;
+  double kpIR1 = 1;
+  double kpIR2 = 1;
 
   for(int i=0;i<irLen;i++){
-    if(ir_map[i]<irThresh){
+    if(ir_map[i]>irThresh){
       if(maxIndex!=-1){
-        if(ir_map[i]<ir_map[maxIndex]){
+        if(ir_map[i]>ir_map[maxIndex]){
           maxIndex=i;
         }
       }else{
@@ -166,21 +174,33 @@ void calcAvoi(){
       }
     }
   }
-  if(maxIndex!=-1){
-    LMod = 0.5*(-kpIR1*ir_map[maxIndex] - kpIR2*ir_points[maxIndex]);
-    RMod = 0.5*(-kpIR1*ir_map[maxIndex] + kpIR2*ir_points[maxIndex]);
-    Serial.printf("LMOD: %d\tRMOD:%d\n",LMod,RMod);
+  //on the left
+  if(maxIndex > 2){
+    Serial.println("Avoiding obstacle");
+    servo3.writeMicroseconds(1700); //Go backwards
+    servo4.writeMicroseconds(1300); 
+    delay(1000);  
+    servo3.writeMicroseconds(1400); //Turn right?
+    servo4.writeMicroseconds(1400); 
+    delay(500);
+    servo3.writeMicroseconds(1300); //Go forward
+    servo4.writeMicroseconds(1700); 
+    delay(1000); 
   }
-  else{
-    LMod=0;
-    RMod=0;
-    Serial.println("No Obs");
-  }
-  
-}
 
-int valToDist(int val){
-  return ((int)((50.25*exp((-9.0E-4)*val))*10.0));
+  if(maxIndex <=2){
+
+    //Serial.println("Avoiding obstacle");
+    servo3.writeMicroseconds(1700); //Go backwards
+    servo4.writeMicroseconds(1300); 
+    delay(1000);  
+    servo3.writeMicroseconds(1600); //Turn left?
+    servo4.writeMicroseconds(1600); 
+    delay(500);
+    servo3.writeMicroseconds(1300); //Go forward
+    servo4.writeMicroseconds(1700); 
+    delay(1000); 
+  }
 }
 
 /**
@@ -188,16 +208,14 @@ int valToDist(int val){
  * @return none
  */
 void getIR(void* pvParameters) {
-  double err_thresh=10.0;
-  int waittime=10;
+  
   for (;;) {
     for(int i=0; i<irLen;i++){
       setSetpoint1(ir_points[i]*7);
-      //Serial.print("Setpoint:");Serial.println(ir_points[i]);
-      while(abs(getError1())>err_thresh){delay(waittime);}
+      Serial.print("Setpoint:");Serial.println(ir_points[i]);
+      while(abs(getError1())>5.0){delay(200);}
       for(int j=0;j<IRSize;j++){
-        filterBoi.AddValue(valToDist(analogRead(irSensorPin)));
-        delayMicroseconds(10);
+        filterBoi.AddValue(analogRead(irSensorPin));
       }
       ir_map[i]=filterBoi.GetFiltered();
       calcAvoi();
@@ -205,11 +223,10 @@ void getIR(void* pvParameters) {
     }
     for(int i=irLen-1; i>=0;i--){
       setSetpoint1(ir_points[i]*7);
-      //Serial.print("Setpoint:");Serial.println(ir_points[i]);
-      while(abs(getError1())>err_thresh){delay(waittime);}
+      Serial.print("Setpoint:");Serial.println(ir_points[i]);
+      while(abs(getError1())>5.0){delay(200);}
       for(int j=0;j<IRSize;j++){
-      filterBoi.AddValue(valToDist(analogRead(irSensorPin)));
-      delayMicroseconds(10);
+      filterBoi.AddValue(analogRead(irSensorPin));
       }
       ir_map[i]=filterBoi.GetFiltered();
       calcAvoi();
@@ -250,6 +267,7 @@ void PIDcontroler(void* pvParameters) {
       Serial.println("No more balls");
       state = 3; // Go defend
     }
+    
     else if (pose.valid == false) { 
       Serial.println("Pose not valid");
       state = 0; // Do nothing (Stop)
@@ -272,17 +290,16 @@ void PIDcontroler(void* pvParameters) {
         b_y = balzz[getNearestBall(pose, balzz, numBalzz)].y;
         error_x = b_x - pose.x;
         error_y = b_y - pose.y;
-        //Serial.printf("\tE_x: %d, \tE_y: %d, \tE_theta: %d, \tPosetheta: %d", error_x, error_y, abs(getErrorTheta(pose, error_x, error_y)), (1000*pose.theta * (180 / (PI*1000))) );
-        if((getErrorD(error_x, error_y) <= 200) && (abs(getErrorTheta(pose, error_x, error_y)) < 5)) { 
+
+        if((getErrorD(error_x, error_y) <= 210) && (abs(getErrorTheta(pose, error_x, error_y)) < 8)) { 
           Serial.println("Capturing the ball");
           servo3.writeMicroseconds(1425); //Go forward
           servo4.writeMicroseconds(1575);
           servo2.write(servoDW); 
-          delay(250);
           state = 2;
         }
         else { 
-          //Serial.printf("\nDriving to ball (%d,%d)", b_x, b_y);
+          Serial.printf("\nDriving to ball (%d,%d)", b_x, b_y);
           driveToPoint(pose, b_x, b_y, false);
           servo2.write(servoUP); 
         }
@@ -370,7 +387,10 @@ void PIDcontroler(void* pvParameters) {
 void setup() {
   Serial.begin(115200);
   /* Comment out when testing without comms */
-  setupCommunications();
+  
+  
+  //setupCommunications();
+  
   
   /* Limit switches */
   pinMode(limitBackPin, INPUT);
@@ -395,12 +415,13 @@ void setup() {
   servo4.writeMicroseconds(1500);
 
     //create a task that executes the Task0code() function, with priority 1 and executed on core 0
-  xTaskCreatePinnedToCore(PIDcontroler, "Task1", 10000, NULL, 1, &Task1, 1);
+  //xTaskCreatePinnedToCore(PIDcontroler, "Task1", 10000, NULL, 1, &Task1, 1);
     //create a task that executes the Task0code() function, with priority 1 and executed on core 1
   xTaskCreatePinnedToCore(getIR, "Task0", 10000, NULL, 1, &Task0, 0);
 }
 
 void loop() {
+
   //Serial.println("Loop");
   delay(10);
   
