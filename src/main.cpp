@@ -12,7 +12,8 @@
 int obstacle = 0;
 //1 = left, 2 = right
 int obstacleside = 0;
-
+int irThresh=10;
+int maxIndex=-1;
 /* Communications and positional */
 int myID = 10;
 int b_x = 0, b_y = 0;
@@ -157,23 +158,20 @@ int getIR_Distance() {
 
 // void calcAvoi(){
 
-//   int irThresh=10;
-//   int maxIndex=-1;
-
 //   double kpIR1 = 1;
 //   double kpIR2 = 1;
 
-//   for(int i=0;i<irLen;i++){
-//     if(ir_map[i]>irThresh){
-//       if(maxIndex!=-1){
-//         if(ir_map[i]>ir_map[maxIndex]){
-//           maxIndex=i;
-//         }
-//       }else{
-//         maxIndex=i;
-//       }
-//     }
-//   }
+  // for(int i=0;i<irLen;i++){
+  //   if(ir_map[i]>irThresh){
+  //     if(maxIndex!=-1){
+  //       if(ir_map[i]>ir_map[maxIndex]){
+  //         maxIndex=i;
+  //       }
+  //     }else{
+  //       maxIndex=i;
+  //     }
+  //   }
+  // }
 //   //on the left
 //   if(maxIndex > 2){
 //     Serial.println("Avoiding obstacle");
@@ -201,7 +199,7 @@ int getIR_Distance() {
 //     servo4.writeMicroseconds(1700); 
 //     delay(1000); 
 //   }
-// }
+
 
 /**
  * Check if there is an obstacle and avoid.
@@ -218,7 +216,7 @@ void getIR(void* pvParameters) {
         filterBoi.AddValue(analogRead(irSensorPin));
       }
       ir_map[i]=filterBoi.GetFiltered();
-      calcAvoi();
+      //calcAvoi();
 
     }
     for(int i=irLen-1; i>=0;i--){
@@ -229,7 +227,7 @@ void getIR(void* pvParameters) {
       filterBoi.AddValue(analogRead(irSensorPin));
       }
       ir_map[i]=filterBoi.GetFiltered();
-      calcAvoi();
+      //calcAvoi();
 
     }
     /*
@@ -381,18 +379,19 @@ void PIDcontroler(void* pvParameters) {
         break;
 
       case 5:
-      
+
         for(int i=0;i<irLen;i++){
-    if(ir_map[i]>irThresh){
-      if(maxIndex!=-1){
-        if(ir_map[i]>ir_map[maxIndex]){
-          maxIndex=i;
+          if(ir_map[i]>irThresh){
+            if(maxIndex!=-1){
+              if(ir_map[i]>ir_map[maxIndex]){
+                maxIndex=i;
+              }
+            }
+                else{
+                  maxIndex=i;
+                }
+          }
         }
-      }else{
-        maxIndex=i;
-      }
-    }
-  }
   //on the left
   if(maxIndex > 2){
     Serial.println("Avoiding obstacle");
@@ -422,10 +421,7 @@ void PIDcontroler(void* pvParameters) {
   }
     }
     delay(10);
-    
   }
-
-  
 }
 
 void setup() {
