@@ -155,53 +155,53 @@ int getIR_Distance() {
 }
 
 
-void calcAvoi(){
+// void calcAvoi(){
 
-  int irThresh=10;
-  int maxIndex=-1;
+//   int irThresh=10;
+//   int maxIndex=-1;
 
-  double kpIR1 = 1;
-  double kpIR2 = 1;
+//   double kpIR1 = 1;
+//   double kpIR2 = 1;
 
-  for(int i=0;i<irLen;i++){
-    if(ir_map[i]>irThresh){
-      if(maxIndex!=-1){
-        if(ir_map[i]>ir_map[maxIndex]){
-          maxIndex=i;
-        }
-      }else{
-        maxIndex=i;
-      }
-    }
-  }
-  //on the left
-  if(maxIndex > 2){
-    Serial.println("Avoiding obstacle");
-    servo3.writeMicroseconds(1700); //Go backwards
-    servo4.writeMicroseconds(1300); 
-    delay(1000);  
-    servo3.writeMicroseconds(1400); //Turn right?
-    servo4.writeMicroseconds(1400); 
-    delay(500);
-    servo3.writeMicroseconds(1300); //Go forward
-    servo4.writeMicroseconds(1700); 
-    delay(1000); 
-  }
+//   for(int i=0;i<irLen;i++){
+//     if(ir_map[i]>irThresh){
+//       if(maxIndex!=-1){
+//         if(ir_map[i]>ir_map[maxIndex]){
+//           maxIndex=i;
+//         }
+//       }else{
+//         maxIndex=i;
+//       }
+//     }
+//   }
+//   //on the left
+//   if(maxIndex > 2){
+//     Serial.println("Avoiding obstacle");
+//     servo3.writeMicroseconds(1700); //Go backwards
+//     servo4.writeMicroseconds(1300); 
+//     delay(1000);  
+//     servo3.writeMicroseconds(1400); //Turn right?
+//     servo4.writeMicroseconds(1400); 
+//     delay(500);
+//     servo3.writeMicroseconds(1300); //Go forward
+//     servo4.writeMicroseconds(1700); 
+//     delay(1000); 
+//   }
 
-  if(maxIndex <=2){
+//   if(maxIndex <=2){
 
-    //Serial.println("Avoiding obstacle");
-    servo3.writeMicroseconds(1700); //Go backwards
-    servo4.writeMicroseconds(1300); 
-    delay(1000);  
-    servo3.writeMicroseconds(1600); //Turn left?
-    servo4.writeMicroseconds(1600); 
-    delay(500);
-    servo3.writeMicroseconds(1300); //Go forward
-    servo4.writeMicroseconds(1700); 
-    delay(1000); 
-  }
-}
+//     //Serial.println("Avoiding obstacle");
+//     servo3.writeMicroseconds(1700); //Go backwards
+//     servo4.writeMicroseconds(1300); 
+//     delay(1000);  
+//     servo3.writeMicroseconds(1600); //Turn left?
+//     servo4.writeMicroseconds(1600); 
+//     delay(500);
+//     servo3.writeMicroseconds(1300); //Go forward
+//     servo4.writeMicroseconds(1700); 
+//     delay(1000); 
+//   }
+// }
 
 /**
  * Check if there is an obstacle and avoid.
@@ -260,10 +260,10 @@ void PIDcontroler(void* pvParameters) {
     Kp2 = 4.5;
     int prevState = state;
 
-    if (pose.valid == true && state != 2 && numBalzz >= 1) { 
+    if (pose.valid == true && state != 2 && numBalzz >= 1 && obstacle == 0) { 
       state = 1; // Shooting
     }
-    else if (!(numBalzz >= 1) && state != 2) { 
+    else if (!(numBalzz >= 1) && state != 2 && obstacle == 0) { 
       Serial.println("No more balls");
       state = 3; // Go defend
     }
@@ -271,6 +271,9 @@ void PIDcontroler(void* pvParameters) {
     else if (pose.valid == false) { 
       Serial.println("Pose not valid");
       state = 0; // Do nothing (Stop)
+    }
+    else if (obstacle == 1){
+      state = 5;
     }
 
     analogRead(limitBackPin) > 10 ? state = 4: state =state;
@@ -376,6 +379,47 @@ void PIDcontroler(void* pvParameters) {
         servo4.writeMicroseconds(1600); 
         delay(500);
         break;
+
+      case 5:
+      
+        for(int i=0;i<irLen;i++){
+    if(ir_map[i]>irThresh){
+      if(maxIndex!=-1){
+        if(ir_map[i]>ir_map[maxIndex]){
+          maxIndex=i;
+        }
+      }else{
+        maxIndex=i;
+      }
+    }
+  }
+  //on the left
+  if(maxIndex > 2){
+    Serial.println("Avoiding obstacle");
+    servo3.writeMicroseconds(1700); //Go backwards
+    servo4.writeMicroseconds(1300); 
+    delay(1000);  
+    servo3.writeMicroseconds(1400); //Turn right?
+    servo4.writeMicroseconds(1400); 
+    delay(500);
+    servo3.writeMicroseconds(1300); //Go forward
+    servo4.writeMicroseconds(1700); 
+    delay(1000); 
+  }
+
+  if(maxIndex <=2){
+
+    //Serial.println("Avoiding obstacle");
+    servo3.writeMicroseconds(1700); //Go backwards
+    servo4.writeMicroseconds(1300); 
+    delay(1000);  
+    servo3.writeMicroseconds(1600); //Turn left?
+    servo4.writeMicroseconds(1600); 
+    delay(500);
+    servo3.writeMicroseconds(1300); //Go forward
+    servo4.writeMicroseconds(1700); 
+    delay(1000); 
+  }
     }
     delay(10);
     
