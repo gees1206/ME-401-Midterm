@@ -381,9 +381,9 @@ void PIDcontroler(void* pvParameters) {
       case 5:
 
         for(int i=0;i<irLen;i++){
-          if(ir_map[i]>irThresh){
+          if(ir_map[i]<irThresh){
             if(maxIndex!=-1){
-              if(ir_map[i]>ir_map[maxIndex]){
+              if(ir_map[i]<ir_map[maxIndex]){
                 maxIndex=i;
               }
             }
@@ -421,6 +421,7 @@ void PIDcontroler(void* pvParameters) {
         }
     }
     delay(10);
+    obstacle = 0;
   }
 }
 
