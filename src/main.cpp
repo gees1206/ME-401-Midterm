@@ -392,33 +392,33 @@ void PIDcontroler(void* pvParameters) {
                 }
           }
         }
-  //on the left
-  if(maxIndex > 2){
-    Serial.println("Avoiding obstacle");
-    servo3.writeMicroseconds(1700); //Go backwards
-    servo4.writeMicroseconds(1300); 
-    delay(1000);  
-    servo3.writeMicroseconds(1400); //Turn right?
-    servo4.writeMicroseconds(1400); 
-    delay(500);
-    servo3.writeMicroseconds(1300); //Go forward
-    servo4.writeMicroseconds(1700); 
-    delay(1000); 
-  }
+  
+        if(maxIndex > 2){
+        Serial.println("Avoiding obstacle");
+        servo3.writeMicroseconds(1700); //Go backwards
+        servo4.writeMicroseconds(1300); 
+        delay(1000);  
+        servo3.writeMicroseconds(1400); //Turn right?
+        servo4.writeMicroseconds(1400); 
+        delay(500);
+        servo3.writeMicroseconds(1300); //Go forward
+        servo4.writeMicroseconds(1700); 
+        delay(1000); 
+        }
 
-  if(maxIndex <=2){
+        if(maxIndex <=2){
 
-    //Serial.println("Avoiding obstacle");
-    servo3.writeMicroseconds(1700); //Go backwards
-    servo4.writeMicroseconds(1300); 
-    delay(1000);  
-    servo3.writeMicroseconds(1600); //Turn left?
-    servo4.writeMicroseconds(1600); 
-    delay(500);
-    servo3.writeMicroseconds(1300); //Go forward
-    servo4.writeMicroseconds(1700); 
-    delay(1000); 
-  }
+          //Serial.println("Avoiding obstacle");
+          servo3.writeMicroseconds(1700); //Go backwards
+          servo4.writeMicroseconds(1300); 
+          delay(1000);  
+          servo3.writeMicroseconds(1600); //Turn left?
+          servo4.writeMicroseconds(1600); 
+          delay(500);
+          servo3.writeMicroseconds(1300); //Go forward
+          servo4.writeMicroseconds(1700); 
+          delay(1000); 
+        }
     }
     delay(10);
   }
