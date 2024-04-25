@@ -152,8 +152,8 @@ void calcAvoi(){
   int irThresh=300;
   int maxIndex=-1;
 
-  double kpIR1 = 5;
-  double kpIR2 = 30;
+  double kpIR1 = 2;
+  double kpIR2 = -5;
 
   for(int i=0;i<irLen;i++){
     if(ir_map[i]<irThresh){
