@@ -9,7 +9,8 @@
 
 /* Communications and positional */
 int myID = 10;
-int b_x = 0, b_y = 0;
+int b_x = 1110, b_y = 1450;
+int t_x = 1300, t_y = 1110;
 int error_x, error_y;
 int error_d, error_theta;
 
@@ -43,12 +44,7 @@ int color[] = {0,0,0};
 /* Servo and driving */
 int servoUP = 120; int servoDW = 85;
 
-/* Shooting y-pos, oponent goal y-pose, own defensive y-pos, Color (1 red, 2 blue) */
-//int team [4] = {2100, 2350, 300, 1}; //Team blue 
-int team [4] = {300, 10, 2100, 2}; //Team red
-int midfield_x = 1225;
-
-int state = 1; //Default state is drive to ball
+int state = 2; //Default state is drive to park
 
 TaskHandle_t Task0;
 TaskHandle_t Task1;
@@ -110,44 +106,6 @@ void driveToPoint(RobotPose pose, int d_x, int d_y, bool rotate_only) {
   servo4.writeMicroseconds(-omega_2 + 1500);
 }
 
-/**
- * Get position of nearest block.
- *
- * @param pose Most up-to date robot position.
- * @param balzz Int array containing position of all balls on field.
- * @param numBalzz Number of balls on the field.
- * @return Returns the index of the ball in balzz, that's closest to the robot.
- */
-int getNearestBall(RobotPose pose, BallPosition balzz[20], int numBalzz) {
-  int nearestball = 0;
-  double balldistance = 0;
-  double closestdistance = 9999;
-
-  for(int i = 0; i < numBalzz; i++) {
-    balldistance = getErrorD(pose.x-balzz[i].x, pose.y-balzz[i].y);
-    // balldistance = sqrt((pose.x-balzz[i].x)*(pose.x-balzz[i].x) + (pose.y-balzz[i].y)*(pose.y-balzz[i].y));
-    if(balldistance < closestdistance && balldistance > 190) {
-      nearestball = i;
-      closestdistance = balldistance; 
-    }
-  }
-  return nearestball;
-}
-
-// /**
-//  * Get IR sensor reading.
-//  * @return returns mean reading across 50 values
-//  */
-// int getIR_Distance() {
-//   int sum = 0;
-//   for (int i = 0; i < 50; i++){
-//     sum = sum + analogRead(irSensorPin);
-//   }
-//   int distance = sum / 50;
-//   Serial.printf("\nDistance: %d", distance);
-  
-//   return distance;
-// }
 void clearmap(){
   obstacle = 0;
   for(int i=0;i<irLen;i++){
@@ -183,7 +141,6 @@ void calcAvoi(){
     //undo things here
   }
 }
-  
 
 /**
  * Check if there is an obstacle and avoid.
@@ -225,28 +182,22 @@ void PIDcontroler(void* pvParameters) {
   for (;;) {
     RobotPose pose = getRobotPose(myID);
     //Serial.printf("\nCurrent Position: %d, %d", pose.x, pose.y);
-    BallPosition balzz[20];
-    int numBalzz = getBallPositions(balzz);
     
     Kp2 = 4.5;
     int prevState = state;
 
     //Serial.printf("Obstacle: %d", obstacle);
-    if(obstacle != 1) {
-      if (pose.valid == true && state != 2 && numBalzz >= 1) { 
-        state = 1; // Shooting
+    if (state != 3){
+      if(obstacle != 1) {
+      state = 2;
       }
-      else if (!(numBalzz >= 1) && state != 2 ) { 
-        Serial.println("No more balls");
-        state = 3; // Go defend
+      else {
+        state = 5;
       }
-    }
-    else {
-      state = 5;
-    }
-    if (pose.valid == false) { 
-      Serial.println("Pose not valid");
-      state = 0; // Do nothing (Stop)
+      if (pose.valid == false) { 
+        Serial.println("Pose not valid");
+        state = 0; // Do nothing (Stop)
+      }
     }
 
     analogRead(limitBackPin) > 10 ? state = 4: state =state;
@@ -261,91 +212,27 @@ void PIDcontroler(void* pvParameters) {
         state = prevState;
         break;
 
-      /* Capture the ball */
-      case 1: 
-        b_x = balzz[getNearestBall(pose, balzz, numBalzz)].x;
-        b_y = balzz[getNearestBall(pose, balzz, numBalzz)].y;
-        error_x = b_x - pose.x;
-        error_y = b_y - pose.y;
-
-        if((getErrorD(error_x, error_y) <= 210) && (abs(getErrorTheta(pose, error_x, error_y)) < 8)) { 
-          Serial.println("Capturing the ball");
-          servo3.writeMicroseconds(1425); //Go forward
-          servo4.writeMicroseconds(1575);
-          servo2.write(servoDW); 
-          if(obstacle == 1) {
-            clearmap();
-          }
-          state = 2;
-        }
-        else { 
-          //Serial.printf("\nDriving to ball (%d,%d)", b_x, b_y);
-          driveToPoint(pose, b_x, b_y, false);
-          servo2.write(servoUP); 
-        }
-        break;
-
-      /* Shoot the ball */
+      /* Drive to point */
       case 2: 
         Serial.println("Shooting the ball");
 
-        if(getErrorD(midfield_x - pose.x, team[0] - pose.y) < 150) { 
+        if(getErrorD(b_x - pose.x, b_y - pose.y) < 100) { 
           Kp2 = 2;
-          driveToPoint(pose, midfield_x, team[1], true); //Point towards the goal
+          driveToPoint(pose, t_x, t_y, true); //Orientation
 
-          if (abs(getErrorTheta(pose, midfield_x - pose.x, team[1] - pose.y)) < 5) {
-            
-            //Check color of zone were in 3 times, if good shoot, if not shoot anyway after 3 tries
-            for(int i = 0; i < 3; i++) {
-              digitalWrite(redPin,HIGH);
-              delay(10); 
-              color[0] = analogRead(lightSensorPin);
-              digitalWrite(redPin,LOW);
-
-              digitalWrite(greenPin,HIGH);
-              delay(10); 
-              color[1] = analogRead(lightSensorPin);
-              digitalWrite(greenPin,LOW);
-              
-              digitalWrite(bluePin,HIGH);
-              delay(10);
-              color[2] = analogRead(lightSensorPin);
-              digitalWrite(bluePin,LOW);
-
-              if((color[0] > 1500 && color[1] < 1300 && team[3] == 2) || (color[0] < 1100 && color[1] > 1600 && team[3] == 1)) {
-                i = 4;
-              }
-            }
-            servo2.write(servoUP); 
-            servo3.writeMicroseconds(1300); //Go forward
-            servo4.writeMicroseconds(1700);
-            delay(1000);
-            servo3.writeMicroseconds(1700); //Go backwards
-            servo4.writeMicroseconds(1300);
-            delay(1000);
-            servo3.writeMicroseconds(1600); //Turn back 
-            servo4.writeMicroseconds(1600);
-            delay(1500);
-            state = 1;
+          if (abs(getErrorTheta(pose, t_x - pose.x, t_y - pose.y)) < 5) {
+            state = 3;
           }
         }
         else {
-          driveToPoint(pose, midfield_x, team[0], false);
+          driveToPoint(pose, b_x, b_x, false);
         }
         break;
 
-      /* Defend */
+      /* Parked */
       case 3: 
-        servo2.write(servoDW);
-
-        if(getErrorD(midfield_x + 75 - pose.x, team[2] - pose.y) < 100) {
-          Serial.println("Turning parallel to goal");
-          driveToPoint(pose, 10, team[2], true);
-        }
-        else {
-          Serial.println("Driving to defensive position");
-          driveToPoint(pose, (midfield_x + 75), team[2], false);
-        }
+        servo3.writeMicroseconds(1500); 
+        servo4.writeMicroseconds(1500); 
         break;
       
       case 4: //Back switch avoidance
