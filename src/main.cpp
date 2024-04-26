@@ -161,6 +161,7 @@ void getIR(void* pvParameters) {
         }
         ir_map[i]=filterBoi.GetFiltered();
         calcAvoi();
+        if(die==true){return;}
 
       }
       for(int i=irLen-1; i>=0;i--){
@@ -173,6 +174,7 @@ void getIR(void* pvParameters) {
         }
         ir_map[i]=filterBoi.GetFiltered();
         calcAvoi();
+        if(die==true){return;}
 
       }
     }
@@ -235,6 +237,7 @@ void PIDcontroler(void* pvParameters) {
         servo3.writeMicroseconds(1500); 
         servo4.writeMicroseconds(1500); 
         servo2.write(servoDW);
+        //die=true;
         break;
       
       case 4: //Back switch avoidance
