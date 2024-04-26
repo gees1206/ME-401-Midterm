@@ -9,10 +9,11 @@
 
 /* Communications and positional */
 int myID = 10;
-int b_x = 1110, b_y = 1450;
+int b_x = 1085, b_y = 1540;
 int t_x = 1300, t_y = 1110;
 int error_x, error_y;
 int error_d, error_theta;
+bool die = false;
 
 // Kp1 = 0.5, Kp2 = 4.5
 double Kp1 = 0.5, Kp2 = 4.5;
@@ -29,7 +30,7 @@ int irLen=7;
 MedianFilter<int> filterBoi(IRSize);
 //Obstacle detected variable:
 int obstacle = 0;
-int irThresh = 20;
+int irThresh = 15;
 int maxIndex = -1;
 
 /* limit switch */
@@ -216,7 +217,7 @@ void PIDcontroler(void* pvParameters) {
       case 2: 
         Serial.println("Shooting the ball");
 
-        if(getErrorD(b_x - pose.x, b_y - pose.y) < 100) { 
+        if(getErrorD(b_x - pose.x, b_y - pose.y) < 70) { 
           Kp2 = 2;
           driveToPoint(pose, t_x, t_y, true); //Orientation
 
@@ -225,7 +226,7 @@ void PIDcontroler(void* pvParameters) {
           }
         }
         else {
-          driveToPoint(pose, b_x, b_x, false);
+          driveToPoint(pose, b_x, b_y, false);
         }
         break;
 
@@ -233,6 +234,7 @@ void PIDcontroler(void* pvParameters) {
       case 3: 
         servo3.writeMicroseconds(1500); 
         servo4.writeMicroseconds(1500); 
+        servo2.write(servoDW);
         break;
       
       case 4: //Back switch avoidance
