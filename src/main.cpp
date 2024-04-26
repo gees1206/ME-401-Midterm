@@ -41,7 +41,7 @@ int minwhite[] = {871,844,855};
 int color[] = {0,0,0};
 
 /* Servo and driving */
-int servoUP = 120; int servoDW = 80;
+int servoUP = 120; int servoDW = 85;
 
 /* Shooting y-pos, oponent goal y-pose, own defensive y-pos, Color (1 red, 2 blue) */
 //int team [4] = {2100, 2350, 300, 1}; //Team blue 
@@ -126,7 +126,7 @@ int getNearestBall(RobotPose pose, BallPosition balzz[20], int numBalzz) {
   for(int i = 0; i < numBalzz; i++) {
     balldistance = getErrorD(pose.x-balzz[i].x, pose.y-balzz[i].y);
     // balldistance = sqrt((pose.x-balzz[i].x)*(pose.x-balzz[i].x) + (pose.y-balzz[i].y)*(pose.y-balzz[i].y));
-    if(balldistance < closestdistance) {
+    if(balldistance < closestdistance && balldistance > 190) {
       nearestball = i;
       closestdistance = balldistance; 
     }
@@ -250,6 +250,7 @@ void PIDcontroler(void* pvParameters) {
     }
 
     analogRead(limitBackPin) > 10 ? state = 4: state =state;
+    clearmap();
 
     switch(state) {
 
