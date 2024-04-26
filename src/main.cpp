@@ -14,7 +14,7 @@ int error_x, error_y;
 int error_d, error_theta;
 
 // Kp1 = 0.5, Kp2 = 4.5
-double Kp1 = 0.5, Kp2 = 5.0;
+double Kp1 = 0.5, Kp2 = 4.5;
 int omega_1, omega_2;
 
 /* DC motor */
@@ -28,8 +28,8 @@ int irLen=7;
 MedianFilter<int> filterBoi(IRSize);
 //Obstacle detected variable:
 int obstacle = 0;
-int irThresh=20;
-int maxIndex=-1;
+int irThresh = 20;
+int maxIndex = -1;
 
 /* limit switch */
 int limitBackPin = 36;
@@ -148,51 +148,77 @@ int getNearestBall(RobotPose pose, BallPosition balzz[20], int numBalzz) {
   
 //   return distance;
 // }
+void clearmap(){
+  obstacle = 0;
+  for(int i=0;i<irLen;i++){
+    ir_map[i]=-1;
+  }
+}
+
+void calcAvoi(){
+  Serial.printf("[%d][%d][%d][%d][%d][%d][%d]\n",ir_map[0],ir_map[1],ir_map[2],ir_map[3],ir_map[4],ir_map[5],ir_map[6]);
+
+  int irThresh=1800;
+  int maxIndex=-1;
+
+  for(int i=0;i<irLen;i++){
+    if(ir_map[i]>irThresh){
+      if(maxIndex!=-1){
+        if(ir_map[i]>ir_map[maxIndex]){
+          maxIndex=i;
+        }
+      } 
+      else{
+        maxIndex=i;
+      }
+    }
+  }
+  if(maxIndex!= -1){
+    obstacle = 1;
+    //do things here
+  }
+    //Serial.printf("LMOD: %d\tRMOD:%d\n",LMod,RMod);
+  else {
+    obstacle = 0;
+    //undo things here
+  }
+}
+  
 
 /**
  * Check if there is an obstacle and avoid.
  * @return none
  */
 void getIR(void* pvParameters) {
-  
-  for (;;) {
-    for(int i=0; i<irLen;i++){
-      setSetpoint1(ir_points[i]*7);
-      Serial.print("Setpoint:");
-      Serial.println(ir_points[i]);
-      while(abs(getError1())>5.0) {
-        delay(200);
-      }
-      for(int j=0;j<IRSize;j++){
-        filterBoi.AddValue(analogRead(irSensorPin));
-      }
-      ir_map[i] = 50.25*exp(-9E-4*(filterBoi.GetFiltered()));
-      //calcAvoi();
+    double err_thresh=10.0;
+    int waittime=10;
+    for (;;) {
+      for(int i=0; i<irLen;i++){
+        setSetpoint1(ir_points[i]*7);
+        //Serial.print("Setpoint:");Serial.println(ir_points[i]);
+        while(abs(getError1())>err_thresh){delay(waittime);}
+        for(int j=0;j<IRSize;j++){
+          filterBoi.AddValue(analogRead(irSensorPin));
+          delayMicroseconds(10);
+        }
+        ir_map[i]=filterBoi.GetFiltered();
+        calcAvoi();
 
-    }
-    for(int i = irLen-1 ; i >= 0; i--){
-      setSetpoint1(ir_points[i]*7);
-      Serial.print("Setpoint:");
-      Serial.println(ir_points[i]);
-      while(abs(getError1()) > 5.0) { 
-        delay(200);
       }
-      for(int j=0;j<IRSize;j++) {
+      for(int i=irLen-1; i>=0;i--){
+        setSetpoint1(ir_points[i]*7);
+        //Serial.print("Setpoint:");Serial.println(ir_points[i]);
+        while(abs(getError1())>err_thresh){delay(waittime);}
+        for(int j=0;j<IRSize;j++){
         filterBoi.AddValue(analogRead(irSensorPin));
-      }
-      ir_map[i]=50.25*exp(-9E-4*(filterBoi.GetFiltered()));
-    }
-    Serial.printf("\nIr_map: ");
-    for (int i = irLen; i < irLen ; i++) {
-      Serial.printf(",%d ", ir_map[i]);
-      if(ir_map[i] < irThresh) {
-        obstacle = 1;
+        delayMicroseconds(10);
+        }
+        ir_map[i]=filterBoi.GetFiltered();
+        calcAvoi();
+
       }
     }
-    Serial.println();
-    
   }
-}
 
 void PIDcontroler(void* pvParameters) {
   
@@ -246,6 +272,9 @@ void PIDcontroler(void* pvParameters) {
           servo3.writeMicroseconds(1425); //Go forward
           servo4.writeMicroseconds(1575);
           servo2.write(servoDW); 
+          if(obstacle == 1) {
+            clearmap();
+          }
           state = 2;
         }
         else { 
@@ -341,7 +370,7 @@ void PIDcontroler(void* pvParameters) {
                 }
           }
         }
-        Serial.printf("%d","%d","%d","%d","%d","%d",ir_map[0],ir_map[1],ir_map[2],ir_map[3],ir_map[4],ir_map[5]);
+        //Serial.printf("%d","%d","%d","%d","%d","%d",ir_map[0],ir_map[1],ir_map[2],ir_map[3],ir_map[4],ir_map[5]);
         if(maxIndex > 2){
         Serial.println("Avoiding obstacle");
         servo3.writeMicroseconds(1700); //Go backwards
@@ -368,10 +397,10 @@ void PIDcontroler(void* pvParameters) {
           servo4.writeMicroseconds(1700); 
           delay(1000); 
         }
-        obstacle = 0;
+        //obstacle = 0;
+        state = prevState;
     }
-    delay(10);
-    
+    delay(10); 
   }
 }
 
