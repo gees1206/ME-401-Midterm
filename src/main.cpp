@@ -148,17 +148,18 @@ int getIR_Distance() {
 }
 
 void calcAvoi(){
+  Serial.printf("[%d][%d][%d][%d][%d][%d][%d]\n",ir_map[0],ir_map[1],ir_map[2],ir_map[3],ir_map[4],ir_map[5],ir_map[6]);
 
-  int irThresh=300;
+  int irThresh=1800;
   int maxIndex=-1;
 
-  double kpIR1 = 2;
-  double kpIR2 = -5;
+  double kpIR1 = 1000;
+  double kpIR2 = -60;
 
   for(int i=0;i<irLen;i++){
-    if(ir_map[i]<irThresh){
+    if(ir_map[i]>irThresh){
       if(maxIndex!=-1){
-        if(ir_map[i]<ir_map[maxIndex]){
+        if(ir_map[i]>ir_map[maxIndex]){
           maxIndex=i;
         }
       }else{
@@ -169,18 +170,19 @@ void calcAvoi(){
   if(maxIndex!=-1){
     LMod = 0.5*(-kpIR1*ir_map[maxIndex] - kpIR2*ir_points[maxIndex]);
     RMod = 0.5*(-kpIR1*ir_map[maxIndex] + kpIR2*ir_points[maxIndex]);
-    Serial.printf("LMOD: %d\tRMOD:%d\n",LMod,RMod);
+    //Serial.printf("LMOD: %d\tRMOD:%d\n",LMod,RMod);
   }
   else{
     LMod=0;
     RMod=0;
-    Serial.println("No Obs");
+    //Serial.println("No Obs");
   }
   
 }
 
 int valToDist(int val){
-  return ((int)((50.25*exp((-9.0E-4)*val))*10.0));
+  //return ((int)((50.25*exp((-9.0E-4)*val))*10.0));
+  return(val);
 }
 
 /**
