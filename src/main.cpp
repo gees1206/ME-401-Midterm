@@ -168,8 +168,9 @@ void calcAvoi(){
     }
   }
   if(maxIndex!=-1){
-    LMod = 0.5*(-kpIR1*ir_map[maxIndex] - kpIR2*ir_points[maxIndex]);
-    RMod = 0.5*(-kpIR1*ir_map[maxIndex] + kpIR2*ir_points[maxIndex]);
+    //LMod = 0.5*(-kpIR1*ir_map[maxIndex] - kpIR2*ir_points[maxIndex]);
+    //RMod = 0.5*(-kpIR1*ir_map[maxIndex] + kpIR2*ir_points[maxIndex]);
+    if(ir_points[maxIndex]>0){}
     //Serial.printf("LMOD: %d\tRMOD:%d\n",LMod,RMod);
   }
   else{
