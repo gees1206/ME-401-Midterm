@@ -44,7 +44,7 @@ int irLen=7;
 MedianFilter<int> filterBoi(IRSize);
 
 /* Servo and driving */
-int servoUP = 135; int servoDW = 85;
+int servoUP = 120; int servoDW = 80;
 
 /* Shooting y-pos, oponent goal y-pose, own defensive y-pos, Color (1 red, 2 blue) */
 //int team [4] = {2100, 2350, 300, 1}; //Team blue 
