@@ -226,9 +226,11 @@ void getIR(void* pvParameters) {
       for(int j=0;j<IRSize;j++){
       filterBoi.AddValue(analogRead(irSensorPin));
       }
-      ir_map[i]=filterBoi.GetFiltered();
+      ir_map[i]=50.25*exp(-9E-4*(filterBoi.GetFiltered()));
       //calcAvoi();
-
+    for(int i = irlen-1; i<irlen;i++){
+      
+    }
     }
     /*
     setSetpoint1(30*7);
