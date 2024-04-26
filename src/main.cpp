@@ -12,7 +12,7 @@
 int obstacle = 0;
 //1 = left, 2 = right
 int obstacleside = 0;
-int irThresh=10;
+int irThresh=7;
 int maxIndex=-1;
 /* Communications and positional */
 int myID = 10;
@@ -215,7 +215,7 @@ void getIR(void* pvParameters) {
       for(int j=0;j<IRSize;j++){
         filterBoi.AddValue(analogRead(irSensorPin));
       }
-      ir_map[i]=filterBoi.GetFiltered();
+      ir_map[i]=50.25*exp(-9E-4*(filterBoi.GetFiltered()));
       //calcAvoi();
 
     }
@@ -258,20 +258,22 @@ void PIDcontroler(void* pvParameters) {
     Kp2 = 4.5;
     int prevState = state;
 
-    if (pose.valid == true && state != 2 && numBalzz >= 1 && obstacle == 0) { 
-      state = 1; // Shooting
+    Serial.printf("Obstacle: %d", obstacle);
+    if(obstacle != 1) {
+      if (pose.valid == true && state != 2 && numBalzz >= 1) { 
+        state = 1; // Shooting
+      }
+      else if (!(numBalzz >= 1) && state != 2 ) { 
+        Serial.println("No more balls");
+        state = 3; // Go defend
+      }
     }
-    else if (!(numBalzz >= 1) && state != 2 && obstacle == 0) { 
-      Serial.println("No more balls");
-      state = 3; // Go defend
+    else {
+      state = 5;
     }
-    
-    else if (pose.valid == false) { 
+    if (pose.valid == false) { 
       Serial.println("Pose not valid");
       state = 0; // Do nothing (Stop)
-    }
-    else if (obstacle == 1){
-      state = 5;
     }
 
     analogRead(limitBackPin) > 10 ? state = 4: state =state;
@@ -379,7 +381,7 @@ void PIDcontroler(void* pvParameters) {
         break;
 
       case 5:
-
+        printf("obstacle");
         for(int i=0;i<irLen;i++){
           if(ir_map[i]<irThresh){
             if(maxIndex!=-1){
@@ -392,7 +394,7 @@ void PIDcontroler(void* pvParameters) {
                 }
           }
         }
-  
+        Serial.printf("%d","%d","%d","%d","%d","%d",ir_map[0],ir_map[1],ir_map[2],ir_map[3],ir_map[4],ir_map[5]);
         if(maxIndex > 2){
         Serial.println("Avoiding obstacle");
         servo3.writeMicroseconds(1700); //Go backwards
@@ -430,7 +432,7 @@ void setup() {
   /* Comment out when testing without comms */
   
   
-  //setupCommunications();
+  setupCommunications();
   
   
   /* Limit switches */
@@ -456,7 +458,7 @@ void setup() {
   servo4.writeMicroseconds(1500);
 
     //create a task that executes the Task0code() function, with priority 1 and executed on core 0
-  //xTaskCreatePinnedToCore(PIDcontroler, "Task1", 10000, NULL, 1, &Task1, 1);
+  xTaskCreatePinnedToCore(PIDcontroler, "Task1", 10000, NULL, 1, &Task1, 1);
     //create a task that executes the Task0code() function, with priority 1 and executed on core 1
   xTaskCreatePinnedToCore(getIR, "Task0", 10000, NULL, 1, &Task0, 0);
 }
