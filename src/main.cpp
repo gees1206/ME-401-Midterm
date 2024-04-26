@@ -7,13 +7,6 @@
 #include "stdint.h"
 #include "MedianFilterLib.h"
 
-
-//Obstacle detected variable:
-int obstacle = 0;
-//1 = left, 2 = right
-int obstacleside = 0;
-int irThresh=7;
-int maxIndex=-1;
 /* Communications and positional */
 int myID = 10;
 int b_x = 0, b_y = 0;
@@ -21,13 +14,23 @@ int error_x, error_y;
 int error_d, error_theta;
 
 // Kp1 = 0.5, Kp2 = 4.5
-double Kp1 = 0.5, Kp2 = 4.5;
+double Kp1 = 0.5, Kp2 = 5.0;
 int omega_1, omega_2;
 
 /* DC motor */
 double kp = 60, ki = 15, kd =1.5;
 /* IR Sensor */ 
 int irSensorPin = 34;
+int ir_points[] = {-45,-30,-15,0,15,30,45};
+int ir_map[]={0,0,0,0,0,0,0};
+int IRSize=30;
+int irLen=7;
+MedianFilter<int> filterBoi(IRSize);
+//Obstacle detected variable:
+int obstacle = 0;
+int irThresh=20;
+int maxIndex=-1;
+
 /* limit switch */
 int limitBackPin = 36;
 /* LED and sensor pin setup */
@@ -36,12 +39,6 @@ int bluePin = 23, greenPin = 22, redPin = 19;
 int maxblack[] = {2336,2382,2480};
 int minwhite[] = {871,844,855};
 int color[] = {0,0,0};
-int ir_points[] = {-45,-30,-15,0,15,30,45};
-int ir_map[]={0,0,0,0,0,0,0};
-int LMod=0 , RMod=0;
-int IRSize=30;
-int irLen=7;
-MedianFilter<int> filterBoi(IRSize);
 
 /* Servo and driving */
 int servoUP = 120; int servoDW = 80;
@@ -109,11 +106,8 @@ void driveToPoint(RobotPose pose, int d_x, int d_y, bool rotate_only) {
   omega_1 = 0.5*(-Kp1*error_d*rot - Kp2*error_theta);
   omega_2 = 0.5*(-Kp1*error_d*rot + Kp2*error_theta);
 
-  int tpmS3 = omega_1 + 1500 + LMod;
-  int tpmS4 = -omega_2 + 1500 - RMod;
-
-  servo3.writeMicroseconds(constrain(tpmS3,1000,2000));
-  servo4.writeMicroseconds(constrain(tpmS4,1000,2000));
+  servo3.writeMicroseconds(omega_1 + 1500);
+  servo4.writeMicroseconds(-omega_2 + 1500);
 }
 
 /**
@@ -140,66 +134,20 @@ int getNearestBall(RobotPose pose, BallPosition balzz[20], int numBalzz) {
   return nearestball;
 }
 
-/**
- * Get IR sensor reading.
- * @return returns mean reading across 50 values
- */
-int getIR_Distance() {
-  int sum = 0;
-  for (int i = 0; i < 50; i++){
-    sum = sum + analogRead(irSensorPin);
-  }
-  int distance = sum / 50;
-  Serial.printf("\nDistance: %d", distance);
+// /**
+//  * Get IR sensor reading.
+//  * @return returns mean reading across 50 values
+//  */
+// int getIR_Distance() {
+//   int sum = 0;
+//   for (int i = 0; i < 50; i++){
+//     sum = sum + analogRead(irSensorPin);
+//   }
+//   int distance = sum / 50;
+//   Serial.printf("\nDistance: %d", distance);
   
-  return distance;
-}
-
-
-// void calcAvoi(){
-
-//   double kpIR1 = 1;
-//   double kpIR2 = 1;
-
-  // for(int i=0;i<irLen;i++){
-  //   if(ir_map[i]>irThresh){
-  //     if(maxIndex!=-1){
-  //       if(ir_map[i]>ir_map[maxIndex]){
-  //         maxIndex=i;
-  //       }
-  //     }else{
-  //       maxIndex=i;
-  //     }
-  //   }
-  // }
-//   //on the left
-//   if(maxIndex > 2){
-//     Serial.println("Avoiding obstacle");
-//     servo3.writeMicroseconds(1700); //Go backwards
-//     servo4.writeMicroseconds(1300); 
-//     delay(1000);  
-//     servo3.writeMicroseconds(1400); //Turn right?
-//     servo4.writeMicroseconds(1400); 
-//     delay(500);
-//     servo3.writeMicroseconds(1300); //Go forward
-//     servo4.writeMicroseconds(1700); 
-//     delay(1000); 
-//   }
-
-//   if(maxIndex <=2){
-
-//     //Serial.println("Avoiding obstacle");
-//     servo3.writeMicroseconds(1700); //Go backwards
-//     servo4.writeMicroseconds(1300); 
-//     delay(1000);  
-//     servo3.writeMicroseconds(1600); //Turn left?
-//     servo4.writeMicroseconds(1600); 
-//     delay(500);
-//     servo3.writeMicroseconds(1300); //Go forward
-//     servo4.writeMicroseconds(1700); 
-//     delay(1000); 
-//   }
-
+//   return distance;
+// }
 
 /**
  * Check if there is an obstacle and avoid.
@@ -210,41 +158,38 @@ void getIR(void* pvParameters) {
   for (;;) {
     for(int i=0; i<irLen;i++){
       setSetpoint1(ir_points[i]*7);
-      Serial.print("Setpoint:");Serial.println(ir_points[i]);
-      while(abs(getError1())>5.0){delay(200);}
+      Serial.print("Setpoint:");
+      Serial.println(ir_points[i]);
+      while(abs(getError1())>5.0) {
+        delay(200);
+      }
       for(int j=0;j<IRSize;j++){
         filterBoi.AddValue(analogRead(irSensorPin));
       }
-      ir_map[i]=50.25*exp(-9E-4*(filterBoi.GetFiltered()));
+      ir_map[i] = 50.25*exp(-9E-4*(filterBoi.GetFiltered()));
       //calcAvoi();
 
     }
-    for(int i=irLen-1; i>=0;i--){
+    for(int i = irLen-1 ; i >= 0; i--){
       setSetpoint1(ir_points[i]*7);
-      Serial.print("Setpoint:");Serial.println(ir_points[i]);
-      while(abs(getError1())>5.0){delay(200);}
-      for(int j=0;j<IRSize;j++){
-      filterBoi.AddValue(analogRead(irSensorPin));
+      Serial.print("Setpoint:");
+      Serial.println(ir_points[i]);
+      while(abs(getError1()) > 5.0) { 
+        delay(200);
+      }
+      for(int j=0;j<IRSize;j++) {
+        filterBoi.AddValue(analogRead(irSensorPin));
       }
       ir_map[i]=50.25*exp(-9E-4*(filterBoi.GetFiltered()));
-      //calcAvoi();
-    for(int i = irlen-1; i<irlen;i++){
-      
     }
+    Serial.printf("\nIr_map: ");
+    for (int i = irLen; i < irLen ; i++) {
+      Serial.printf(",%d ", ir_map[i]);
+      if(ir_map[i] < irThresh) {
+        obstacle = 1;
+      }
     }
-    /*
-    setSetpoint1(30*7);
-    //Serial.println("Avoiding obstacle");
-    
-    delay(1000);
-    if (getIR_Distance() > 1300) {
-      Serial.println("Avoiding obstacle");
-      //
-      //Here you need to interrupt
-      //
-    }
-    setSetpoint1(-30*7);
-    delay(1000);*/
+    Serial.println();
     
   }
 }
@@ -260,7 +205,7 @@ void PIDcontroler(void* pvParameters) {
     Kp2 = 4.5;
     int prevState = state;
 
-    Serial.printf("Obstacle: %d", obstacle);
+    //Serial.printf("Obstacle: %d", obstacle);
     if(obstacle != 1) {
       if (pose.valid == true && state != 2 && numBalzz >= 1) { 
         state = 1; // Shooting
@@ -304,7 +249,7 @@ void PIDcontroler(void* pvParameters) {
           state = 2;
         }
         else { 
-          Serial.printf("\nDriving to ball (%d,%d)", b_x, b_y);
+          //Serial.printf("\nDriving to ball (%d,%d)", b_x, b_y);
           driveToPoint(pose, b_x, b_y, false);
           servo2.write(servoUP); 
         }
@@ -383,7 +328,7 @@ void PIDcontroler(void* pvParameters) {
         break;
 
       case 5:
-        printf("obstacle");
+        // printf("obstacle");
         for(int i=0;i<irLen;i++){
           if(ir_map[i]<irThresh){
             if(maxIndex!=-1){
@@ -423,9 +368,10 @@ void PIDcontroler(void* pvParameters) {
           servo4.writeMicroseconds(1700); 
           delay(1000); 
         }
+        obstacle = 0;
     }
     delay(10);
-    obstacle = 0;
+    
   }
 }
 
