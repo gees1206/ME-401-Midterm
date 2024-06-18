@@ -107,6 +107,11 @@ void driveToPoint(RobotPose pose, int d_x, int d_y, bool rotate_only) {
   servo4.writeMicroseconds(-omega_2 + 1500);
 }
 
+/**
+ * Clears IR map for the next pass.
+ * 
+ * @return none
+ */
 void clearmap(){
   obstacle = 0;
   for(int i=0;i<irLen;i++){
@@ -114,6 +119,11 @@ void clearmap(){
   }
 }
 
+/**
+ * Calculate closest obstacle and flag avoidance.
+ *
+ * @return none (rewrites @var obstacle)
+ */
 void calcAvoi(){
   Serial.printf("[%d][%d][%d][%d][%d][%d][%d]\n",ir_map[0],ir_map[1],ir_map[2],ir_map[3],ir_map[4],ir_map[5],ir_map[6]);
 
@@ -180,6 +190,16 @@ void getIR(void* pvParameters) {
     }
   }
 
+
+/**
+ * PID controller function.
+ * The robot navigates a field with obstacles, avoiding them using
+ * IR sweep and parks at a predetermined location and angle withing 
+ * a couple of centimeters.
+ *
+ * @param pvParameters 
+ * @return none
+ */
 void PIDcontroler(void* pvParameters) {
   
   for (;;) {
