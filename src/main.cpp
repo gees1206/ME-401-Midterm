@@ -220,6 +220,19 @@ void getIR(void* pvParameters) {
     }
   }
 
+/**
+ * PID controller function.
+ * The robot navigates a field with obstacles, avoiding them using
+ * IR sweep and plays a game of "soccer".
+ * 
+ * It locates and navigates to a colored ball, captures it using 
+ * a capturing mechanism, drives to the oponent's goal and shoots
+ * the ball. In case no balls are on field, the robot drives to own
+ * goal and moves infront of it to defend.
+ *
+ * @param pvParameters 
+ * @return none
+ */
 void PIDcontroler(void* pvParameters) {
   
   for (;;) {
@@ -348,7 +361,8 @@ void PIDcontroler(void* pvParameters) {
         }
         break;
       
-      case 4: //Back switch avoidance
+      /* Back switch avoidance */
+      case 4: 
         servo3.writeMicroseconds(1300); //Go forward
         servo4.writeMicroseconds(1700); 
         delay(1000);  
@@ -357,6 +371,7 @@ void PIDcontroler(void* pvParameters) {
         delay(500);
         break;
 
+      /* IR obstacle avoidance */
       case 5:
         // printf("obstacle");
         for(int i=0;i<irLen;i++){
@@ -408,10 +423,7 @@ void PIDcontroler(void* pvParameters) {
 void setup() {
   Serial.begin(115200);
   /* Comment out when testing without comms */
-  
-  
   setupCommunications();
-  
   
   /* Limit switches */
   pinMode(limitBackPin, INPUT);
